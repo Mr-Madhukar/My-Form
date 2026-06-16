@@ -1,0 +1,28 @@
+{
+  "name": "@repo/database",
+  "version": "1.0.0",
+  "scripts": {
+    "db:migrate": "dotenv -e ../../.env -- drizzle-kit migrate",
+    "db:generate": "dotenv -e ../../.env -- drizzle-kit generate",
+    "db:seed": "dotenv -e ../../.env -- tsx seed.ts",
+    "dev": "dotenv -e ../../.env -- drizzle-kit studio"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/pg": "^8.16.0",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@repo/forms": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.45.1",
+    "nanoid": "^5.1.5",
+    "pg": "^8.16.3",
+    "zod": "^4.3.5"
+  }
+}

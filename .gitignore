@@ -1,0 +1,74 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+coverage
+
+# Turbo
+.turbo
+
+# Vercel
+.vercel
+
+# Build Outputs
+.next/
+out/
+build
+dist
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.DS_Store
+*.pem
+Thumbs.db
+*.swp
+*.swo
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# AI / Agent tool configs (not needed in repo)
+.agents/
+.antigravitycli/
+.claude/
+.commandcode/
+.kilo/
+.mcp.json
+.playwright-mcp
+.playwright-cli
+opencode.json
+skills-lock.json
+CLAUDE.md
+prompt.md
+
+# Credentials — NEVER push
+cred.md
+
+# Development plans (internal only)
+plans/
+advisor-plans/
+
+# Temporary screenshots
+plans/qa-screenshots
+
+# Images not needed in repo
+image.png
+
+# Tweet draft
+tweet.md
