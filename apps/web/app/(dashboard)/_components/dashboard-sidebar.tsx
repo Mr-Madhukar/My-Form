@@ -123,6 +123,7 @@ function DashboardSidebarContent() {
     { href: "/explore", label: "Explore", icon: Compass },
     { href: "/billing", label: "Plan & Billing", icon: CreditCard },
     { href: "/help", label: "Help & Support", icon: HelpCircle },
+    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   return (

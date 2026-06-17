@@ -1,7 +1,7 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import { Type, AlignLeft, Mail, Hash, CircleDot, SquareCheck, Star, Calendar } from "lucide-react";
+import { Type, AlignLeft, Mail, Hash, CircleDot, SquareCheck, Star, Calendar, Upload, Clock, Link } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useFormEditorStore } from "~/stores/form-editor";
 import { cn } from "~/lib/utils";
@@ -93,6 +93,27 @@ export const FIELD_GROUPS: Array<{ label: string; types: PaletteFieldDef[] }> = 
         label: "Date",
         description: "Date picker",
         icon: Calendar,
+        defaultConfig: {},
+      },
+      {
+        type: "file_upload",
+        label: "File upload",
+        description: "File attachment",
+        icon: Upload,
+        defaultConfig: { maxSizeMb: 10 },
+      },
+      {
+        type: "time",
+        label: "Time",
+        description: "Time picker",
+        icon: Clock,
+        defaultConfig: {},
+      },
+      {
+        type: "url",
+        label: "URL",
+        description: "Web link",
+        icon: Link,
         defaultConfig: {},
       },
     ],

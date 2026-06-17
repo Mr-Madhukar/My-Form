@@ -3,7 +3,7 @@ import { eq, asc, and } from "@repo/database";
 import { formVersionsTable, formFieldsTable } from "@repo/database/schema";
 import db from "@repo/database";
 import { TRPCError } from "@trpc/server";
-import { fieldConfigUnion, themeSchema } from "@repo/forms";
+import { fieldConfigUnion, themeSchema, type FieldType } from "@repo/forms";
 import { invalidateKeys, CacheKeys } from "@repo/services/redis";
 import { z } from "../../schema";
 import { formProcedure, router } from "../../trpc";
@@ -20,15 +20,7 @@ function mapField(f: {
   return {
     id: f.id,
     order: f.order,
-    type: f.type as
-      | "number"
-      | "date"
-      | "email"
-      | "short_text"
-      | "long_text"
-      | "single_choice"
-      | "multiple_choice"
-      | "rating",
+    type: f.type as FieldType,
     label: f.label,
     required: f.required,
     config: (f.config ?? {}) as Record<string, unknown>,

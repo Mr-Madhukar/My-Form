@@ -49,6 +49,19 @@ export const fieldConfigSchemas = {
     max: z.string().optional(),
     format: z.string().optional(),
   }),
+
+  file_upload: z.object({
+    maxSizeMb: z.number().int().min(1).optional(),
+    allowedTypes: z.array(z.string()).optional(),
+  }),
+
+  time: z.object({
+    placeholder: z.string().optional(),
+  }),
+
+  url: z.object({
+    placeholder: z.string().optional(),
+  }),
 } as const;
 
 export type FieldConfigs = {
@@ -64,4 +77,8 @@ export const fieldConfigUnion = z.discriminatedUnion("type", [
   z.object({ type: z.literal("multiple_choice"), config: fieldConfigSchemas.multiple_choice }),
   z.object({ type: z.literal("rating"), config: fieldConfigSchemas.rating }),
   z.object({ type: z.literal("date"), config: fieldConfigSchemas.date }),
+  z.object({ type: z.literal("file_upload"), config: fieldConfigSchemas.file_upload }),
+  z.object({ type: z.literal("time"), config: fieldConfigSchemas.time }),
+  z.object({ type: z.literal("url"), config: fieldConfigSchemas.url }),
 ]);
+

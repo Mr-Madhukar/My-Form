@@ -61,6 +61,8 @@ export function EditorTopbar({
     selectField,
     setFieldErrors,
     clearFieldErrors,
+    selectedFieldId,
+    removeField,
   } = useFormEditorStore();
 
   const titleRef = useRef<HTMLInputElement>(null);
@@ -115,17 +117,51 @@ export function EditorTopbar({
     }
   }, [formVersion, fields, isSaving, formId]);
 
-  // Cmd+S
+  // Keyboard Shortcuts Handler
   useEffect(() => {
     function handler(e: KeyboardEvent) {
+      // Save: Ctrl+S / Cmd+S
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         save();
+        return;
+      }
+
+      // Preview: Ctrl+P / Cmd+P
+      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault();
+        if (publicSlug) {
+          window.open(`/f/${publicSlug}`, "_blank");
+        } else {
+          toast.info("Save/Publish the form to preview the public runner link");
+        }
+        return;
+      }
+
+      // Delete Field: Delete / Backspace
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const activeEl = document.activeElement;
+        if (
+          activeEl &&
+          (activeEl.tagName === "INPUT" ||
+            activeEl.tagName === "TEXTAREA" ||
+            activeEl.tagName === "SELECT" ||
+            activeEl.hasAttribute("contenteditable") ||
+            activeEl.closest("[contenteditable]"))
+        ) {
+          return;
+        }
+
+        if (selectedFieldId) {
+          e.preventDefault();
+          removeField(selectedFieldId);
+          toast.success("Field removed", { duration: 2000 });
+        }
       }
     }
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [save]);
+  }, [save, publicSlug, selectedFieldId, removeField]);
 
   function validateFieldsForPublish(): Record<string, string> | null {
     const errors: Record<string, string> = {};

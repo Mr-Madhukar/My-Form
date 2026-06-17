@@ -13,6 +13,9 @@ import {
   SquareCheck,
   Star,
   Calendar,
+  Upload,
+  Clock,
+  Link,
 } from "lucide-react";
 import { useFormEditorStore } from "~/stores/form-editor";
 import type { EditorField } from "~/stores/form-editor";
@@ -29,6 +32,9 @@ const TYPE_META: Record<string, { icon: React.ElementType; label: string }> = {
   multiple_choice: { icon: SquareCheck, label: "Multiple choice" },
   rating: { icon: Star, label: "Rating" },
   date: { icon: Calendar, label: "Date" },
+  file_upload: { icon: Upload, label: "File upload" },
+  time: { icon: Clock, label: "Time" },
+  url: { icon: Link, label: "URL" },
 };
 
 export function FieldCard({ field, index = 0 }: { field: EditorField; index?: number }) {
@@ -106,7 +112,9 @@ export function FieldCard({ field, index = 0 }: { field: EditorField; index?: nu
           >
             {field.label || "(Untitled)"}
           </span>
-          <span className="font-mono text-[11px] text-[#6B6B6B]">{meta.label}</span>
+          <span className="font-mono text-[11px] text-[#6B6B6B]">
+            {meta.label} • {field.required ? "Required" : "Optional"}
+          </span>
         </div>
 
         {/* Required badge */}
@@ -131,7 +139,7 @@ export function FieldCard({ field, index = 0 }: { field: EditorField; index?: nu
               <Trash2 className="size-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Delete field</TooltipContent>
+          <TooltipContent>Delete field (Del/Backspace)</TooltipContent>
         </Tooltip>
       </div>
       {error && <p className="px-4 font-mono text-[11px] text-red-400">{error}</p>}

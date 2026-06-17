@@ -57,6 +57,13 @@
       "when": 1781617248815,
       "tag": "0007_massive_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781676851209,
+      "tag": "0008_wise_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

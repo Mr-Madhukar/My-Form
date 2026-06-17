@@ -5,7 +5,28 @@ import Link from "next/link";
 import confetti from "canvas-confetti";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowUp, Check, Loader2, Pencil, Star, Sparkles } from "lucide-react";
+import {
+  ArrowUp,
+  Check,
+  Loader2,
+  Pencil,
+  Star,
+  Sparkles,
+  Mail,
+  Lock,
+  Plus,
+  ChevronDown,
+  Clock,
+  ExternalLink,
+  FileText,
+  Hash,
+  Calendar,
+  ArrowLeft,
+  ArrowRight,
+  HelpCircle,
+  Link2,
+  Upload,
+} from "lucide-react";
 import { buildResponseSchema, zodForField, evaluateFieldVisibility, type FieldType, type FormTheme, type FieldCondition } from "@repo/forms";
 import { trpc } from "~/trpc/client";
 import { cn } from "~/lib/utils";
@@ -335,6 +356,8 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [responseId, setResponseId] = useState<string | null>(null);
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [channel, setChannel] = useState<"welcome" | "submit-response">("welcome");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // Bumped on "Submit another response" so the typing-indicator effect refires even at step 0
   const [runKey, setRunKey] = useState(0);
   const honeypotRef = useRef<HTMLInputElement>(null);
@@ -807,6 +830,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
     setAiFollowups(new Map());
     setDebrief({ tag: "idle" });
     setDebriefAnswers(new Map());
+    setChannel("welcome");
     window.scrollTo({ top: 0 });
   }, [form, defaultValues, storageKey]);
 
@@ -832,257 +856,339 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="relative flex min-h-dvh flex-col bg-(--form-bg) text-(--form-text-primary)" style={cssVars}>
-      {/* Radial glow */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 h-[60vh]"
-        style={{
-          background: `radial-gradient(60% 60% at 50% 0%, ${hexToRgba(accent, 0.10)}, transparent 70%)`,
-        }}
-      />
-
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/6 bg-[color-mix(in_srgb,var(--form-bg)_70%,transparent)] backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-4 px-5 py-3.5">
-          <h1 className="truncate text-sm font-semibold tracking-tight text-(--form-text-primary)">{title}</h1>
-          <span className="shrink-0 font-mono text-xs text-(--form-text-muted)">{counter}</span>
+    <div className="relative flex h-screen w-screen overflow-hidden bg-[#313338] text-[#dbdee1] font-sans" style={cssVars}>
+      {/* 1. Leftmost icon rail (Discord style) */}
+      <div className="hidden sm:flex flex-col items-center py-3 w-[72px] bg-[#1e1f22] shrink-0 gap-2">
+        {/* Guild icon (Form Icon) */}
+        <div className="relative group flex items-center justify-center size-12 rounded-3xl hover:rounded-2xl bg-[#313338] text-[var(--form-accent)] hover:bg-[var(--form-accent)] hover:text-black transition-all duration-300 cursor-pointer font-bold text-lg shadow-lg">
+          {initial}
+          {/* Active indicator pill */}
+          <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-2 h-5 bg-white rounded-r-md scale-y-0 group-hover:scale-y-100 transition-all duration-300" />
         </div>
-        <div className="h-0.5 w-full bg-white/4">
-          <div
-            className="h-full bg-(--form-accent) transition-[width] duration-500 ease-out"
-            style={{ width: `${progressPct}%` }}
-          />
+        
+        {/* Separator line */}
+        <div className="w-8 h-[2px] bg-zinc-800 rounded my-1" />
+        
+        {/* Help icon */}
+        <Link href="/help" className="flex items-center justify-center size-12 rounded-3xl hover:rounded-2xl bg-[#313338] text-zinc-400 hover:bg-[#23a55a] hover:text-white transition-all duration-300 cursor-pointer">
+          <HelpCircle className="size-5" />
+        </Link>
+      </div>
+
+      {/* 2. Channels list sidebar */}
+      <div className={cn(
+        "fixed inset-y-0 left-0 z-30 flex flex-col w-[240px] bg-[#2b2d31] border-r border-[#1e1f22] shrink-0 transition-transform duration-300 sm:relative sm:translate-x-0",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
+      )}>
+        {/* Channel Header (Server Name) */}
+        <div className="h-12 border-b border-[#1e1f22] flex items-center px-4 font-bold text-white shadow-sm truncate">
+          {title}
         </div>
-      </header>
 
-      {/* Thread */}
-      <main className="relative z-10 flex-1">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-5 py-8">
-          {description && <p className="text-sm leading-relaxed text-(--form-text-muted)">{description}</p>}
-
-          {bannerError && (
-            <div
-              role="alert"
-              aria-live="assertive"
-              className="rounded-xl border border-[color-mix(in_srgb,var(--form-accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--form-accent)_10%,transparent)] px-4 py-3 text-sm text-(--form-accent)"
-            >
-              {bannerError}
-            </div>
-          )}
-
-          {/* Form Q&A bubbles */}
-          {ordered.map((field, i) => {
-            if (i > step) return null;
-            const answered = i < step || submitted;
-            const isEditing = editingFieldId === field.id;
-            return (
-              <div key={field.id} className="flex flex-col gap-5">
-                <QuestionBubble field={field} initial={initial} faded={answered && !isEditing} />
-                {answered && (
-                  <AnswerBubble
-                    text={formatAnswer(field, form.getValues(field.id))}
-                    faded={answered && !isEditing}
-                    onEdit={
-                      !submitted && !submitMutation.isPending
-                        ? () => {
-                            setFieldError(null);
-                            setEditingFieldId(field.id);
-                          }
-                        : undefined
-                    }
-                  />
+        {/* Channels */}
+        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+          <div>
+            <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-[#949ba4] font-mono">Channels</p>
+            <div className="space-y-0.5 mt-1">
+              <button
+                onClick={() => {
+                  if (submitted) return; // disable if form is completed
+                  setChannel("welcome");
+                  setSidebarOpen(false);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors font-medium cursor-pointer",
+                  channel === "welcome"
+                    ? "bg-[#35373c] text-white"
+                    : "text-[#949ba4] hover:bg-[#35373c]/40 hover:text-[#dbdee1]"
                 )}
-              </div>
-            );
-          })}
+              >
+                <span className="text-zinc-500 font-semibold text-base">#</span>
+                welcome
+              </button>
 
-          {/* Typing indicator for next form question */}
-          {!submitted && typing && step < total && (
-            <div className="flex items-end gap-2.5">
-              <Avatar initial={initial} />
-              <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-white/[0.07] bg-(--form-surface) px-4 py-3.5">
-                <TypingDots />
-              </div>
+              <button
+                onClick={() => {
+                  setChannel("submit-response");
+                  setSidebarOpen(false);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors font-medium cursor-pointer",
+                  channel === "submit-response"
+                    ? "bg-[#35373c] text-white"
+                    : "text-[#949ba4] hover:bg-[#35373c]/40 hover:text-[#dbdee1]"
+                )}
+              >
+                <span className="text-zinc-500 font-semibold text-base">#</span>
+                submit-response
+              </button>
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Debrief: past follow-up Q&As */}
-          {submitted &&
-            eligibleFollowupFields.map((field, i) => {
-              const fu = aiFollowups.get(field.id);
-              if (!fu) return null;
+        {/* User profile section at bottom of sidebar */}
+        <div className="h-[52px] bg-[#232428] flex items-center px-3 justify-between">
+          <div className="flex items-center gap-2">
+            <div className="size-8 rounded-full bg-[var(--form-accent)] flex items-center justify-center font-bold text-black text-xs">
+              U
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold text-white truncate leading-none">Respondent</span>
+              <span className="text-[10px] text-zinc-400 leading-none mt-1">Anonymous User</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              const isCurrentDebrief = debrief.tag === "active" && debrief.index === i;
-              const isPastDebrief = debriefAnswers.has(field.id);
-              if (!isCurrentDebrief && !isPastDebrief) return null;
+      {/* Overlay for mobile sidebar */}
+      {sidebarOpen && (
+        <div 
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-20 bg-black/60 sm:hidden"
+        />
+      )}
 
-              const userAnswer = debriefAnswers.get(field.id);
-              const faded = isPastDebrief && !isCurrentDebrief;
+      {/* 3. Main chat panel */}
+      <div className="flex-1 flex flex-col bg-[#313338] min-w-0 h-full">
+        {/* Main top header */}
+        <header className="h-12 border-b border-[#1e1f22] shrink-0 flex items-center px-4 justify-between bg-[#313338] shadow-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Hamburger button on mobile */}
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="sm:hidden text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-850"
+            >
+              <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <span className="text-zinc-500 font-semibold text-lg shrink-0">#</span>
+            <span className="font-bold text-white text-sm shrink-0">{channel}</span>
+            <div className="hidden sm:block w-[1px] h-4 bg-[#232428] mx-2" />
+            <span className="hidden sm:inline text-xs text-[#949ba4] truncate">{description || "Fill out the form below."}</span>
+          </div>
+        </header>
 
-              return (
-                <div key={`fu-${field.id}`} className="flex flex-col gap-5">
-                  {/* AI question bubble */}
-                  {fu.aiQuestion ? (
-                    <AiFollowUpBubble
-                      text={fu.aiQuestion}
-                      streaming={isCurrentDebrief && fu.streaming}
-                    />
-                  ) : (
-                    // Still streaming when this debrief item is first shown
-                    <div className="flex items-end gap-2.5 animate-bubble-in-left">
-                      <AiAvatar />
-                      <div className="rounded-2xl rounded-bl-sm border border-white/[0.07] bg-(--form-surface) px-4 py-3.5">
-                        <TypingDots />
+        {/* Content body */}
+        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
+          {channel === "welcome" ? (
+            /* Welcome view */
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto space-y-6">
+              <div className="size-20 rounded-full bg-[#1e1f22] flex items-center justify-center shadow-lg border border-zinc-800">
+                <span className="text-3xl font-extrabold text-[var(--form-accent)]">{initial}</span>
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-extrabold text-white tracking-tight">{title}</h2>
+                {description && <p className="text-sm text-[#949ba4] leading-relaxed">{description}</p>}
+              </div>
+              <Button
+                onClick={() => setChannel("submit-response")}
+                className="px-6 py-2.5 rounded-xl font-semibold bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_95%,#000)] text-[#0a0a0a] transition-all cursor-pointer shadow-md"
+              >
+                Get Started
+                <ArrowRight className="size-4 ml-1.5" />
+              </Button>
+            </div>
+          ) : (
+            /* submit-response view */
+            <div className="flex-1 flex flex-col">
+              {!submitted ? (
+                /* Question slider */
+                <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-xl mx-auto w-full">
+                  <div className="w-full bg-[#2b2d31]/40 border border-white/[0.03] rounded-2xl p-8 shadow-xl space-y-6 flex flex-col justify-between min-h-[300px]">
+                    <div className="space-y-4">
+                      {/* Form title watermark */}
+                      <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#949ba4] block leading-none">
+                        {title}
+                      </span>
+                      
+                      {/* Active Question */}
+                      {current ? (
+                        <div className="space-y-4">
+                          <h3 className="text-xl font-bold text-white tracking-tight leading-snug">
+                            {current.label}
+                            {current.required && <span className="text-[var(--form-accent)] ml-1">*</span>}
+                          </h3>
+
+                          {/* Error banner */}
+                          {fieldError && (
+                            <p role="alert" className="text-xs font-semibold text-red-400">
+                              {fieldError}
+                            </p>
+                          )}
+
+                          {/* Question Input ReplyArea */}
+                          <div className="mt-2">
+                            <ReplyArea
+                              key={current.id}
+                              field={current}
+                              disabled={typing || submitMutation.isPending}
+                              pending={submitMutation.isPending}
+                              onSubmit={validateAndAdvance}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-center py-12">
+                          <Loader2 className="size-6 animate-spin text-zinc-500" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer / navigation */}
+                    <div className="flex items-center justify-between pt-4 border-t border-white/[0.04] mt-auto">
+                      <div className="flex items-center gap-1.5">
+                        {step > 0 && (
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              setFieldError(null);
+                              setStep(step - 1);
+                            }}
+                            className="h-8 rounded-lg px-2.5 text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer"
+                          >
+                            <ArrowLeft className="size-3.5 mr-1" />
+                            Back
+                          </Button>
+                        )}
+                      </div>
+                      <span className="font-mono text-xs text-zinc-500 font-bold">
+                        {step + 1} / {total}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Chat view for AI debrief or finished success */
+                <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                  {/* Message stream */}
+                  <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                    {/* Bot initial success message */}
+                    <div className="flex items-start gap-4">
+                      <div className="size-10 rounded-full bg-[#1e1f22] flex items-center justify-center shrink-0 border border-zinc-800">
+                        <span className="text-sm font-extrabold text-[var(--form-accent)]">{initial}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white text-sm">MyForm Bot</span>
+                          <span className="bg-[#5865f2] text-white text-[9px] px-1 rounded font-bold tracking-wider leading-none py-0.5">BOT</span>
+                          <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
+                        </div>
+                        <div className="text-zinc-200 text-sm leading-relaxed">
+                          Your response has been successfully submitted! Thank you.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI debrief chat bubbles */}
+                    {eligibleFollowupFields.map((field, i) => {
+                      const fu = aiFollowups.get(field.id);
+                      if (!fu) return null;
+
+                      const isCurrentDebrief = debrief.tag === "active" && debrief.index === i;
+                      const isPastDebrief = debriefAnswers.has(field.id);
+                      if (!isCurrentDebrief && !isPastDebrief) return null;
+
+                      const userAnswer = debriefAnswers.get(field.id);
+
+                      return (
+                        <div key={`fu-${field.id}`} className="space-y-6">
+                          {/* AI question message */}
+                          <div className="flex items-start gap-4">
+                            <div className="size-10 rounded-full border border-[color-mix(in_srgb,var(--form-ai-accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--form-ai-accent)_15%,transparent)] flex items-center justify-center shrink-0">
+                              <Sparkles className="size-4 text-(--form-ai-accent)" />
+                            </div>
+                            <div className="space-y-1 w-full">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-white text-sm">AI Follow-up Assistant</span>
+                                <span className="bg-purple-600 text-white text-[9px] px-1 rounded font-bold tracking-wider leading-none py-0.5">AI</span>
+                                <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
+                              </div>
+                              <div className="text-zinc-200 text-sm leading-relaxed">
+                                {fu.aiQuestion ? (
+                                  fu.aiQuestion
+                                ) : (
+                                  <div className="flex items-center gap-1.5 py-1">
+                                    <Loader2 className="size-3 animate-spin text-zinc-500" />
+                                    <span className="text-xs text-zinc-500">AI is thinking...</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* User reply message */}
+                          {isPastDebrief && (
+                            <div className="flex items-start gap-4">
+                              <div className="size-10 rounded-full bg-[var(--form-accent)] flex items-center justify-center shrink-0 font-bold text-black text-xs">
+                                U
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-white text-sm">Respondent</span>
+                                  <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
+                                </div>
+                                <div className="text-zinc-200 text-sm leading-relaxed italic bg-white/[0.02] border border-white/5 px-3 py-2 rounded-xl">
+                                  {userAnswer === null ? "Skipped follow-up." : userAnswer}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Finished state & Done actions */}
+                    {debrief.tag === "done" && (
+                      <div className="pt-6 border-t border-white/[0.04] max-w-md mx-auto">
+                        <DoneActions slug={slug} onReset={resetAll} />
+                      </div>
+                    )}
+
+                    <div ref={threadEndRef} />
+                  </div>
+
+                  {/* Debrief reply chat bar at bottom */}
+                  {showDebriefFooter && currentDebriefField && (
+                    <div className="p-4 bg-[#2b2d31] border-t border-[#1e1f22]">
+                      <div className="max-w-2xl mx-auto space-y-2">
+                        <p className="text-[10px] font-mono uppercase tracking-widest text-[#949ba4] flex items-center justify-between">
+                          <span>AI Follow-up · Question {debrief.index + 1} of {eligibleFollowupFields.length}</span>
+                          {remainingFollowups > 1 && (
+                            <button onClick={() => void handleSkipAll()} className="text-zinc-500 hover:text-white underline cursor-pointer">
+                              Skip all
+                            </button>
+                          )}
+                        </p>
+                        <FollowupReplyArea
+                          key={currentDebriefField.id}
+                          onSubmit={(a) => void handleDebriefAnswer(currentDebriefField.id, a)}
+                          onSkip={() => void handleDebriefAnswer(currentDebriefField.id, null)}
+                          pending={saveFollowupsMutation.isPending}
+                        />
                       </div>
                     </div>
                   )}
 
-                  {/* User's answer (only if already answered) */}
-                  {isPastDebrief && (
-                    <AiFollowUpAnswer
-                      text={userAnswer ?? null}
-                      skipped={userAnswer === null}
-                      faded={faded}
-                    />
+                  {/* Loading/Streaming indicator */}
+                  {debrief.tag === "active" && waitingOnAi && (
+                    <div className="p-4 bg-[#2b2d31] border-t border-[#1e1f22] flex items-center justify-between text-xs text-zinc-400">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="size-4 animate-spin text-[var(--form-accent)]" />
+                        AI is typing...
+                      </div>
+                      <Button onClick={() => void handleDebriefAnswer(currentDebriefField!.id, null)} className="h-8 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 cursor-pointer">
+                        Skip
+                      </Button>
+                    </div>
                   )}
                 </div>
-              );
-            })}
-
-          {/* Saving indicator */}
-          {debrief.tag === "saving" && (
-            <div className="flex items-center gap-2 text-xs text-(--form-text-muted)">
-              <Loader2 className="size-3.5 animate-spin" />
-              Saving…
+              )}
             </div>
           )}
-
-          {debrief.tag === "done" && (
-            <>
-              {eligibleFollowupFields.length > 0 ? <AllDoneState /> : <SuccessState />}
-              <DoneActions slug={slug} onReset={resetAll} />
-            </>
-          )}
-
-          <div ref={threadEndRef} className={debrief.tag === "done" ? "pb-16" : ""} />
         </div>
-      </main>
-
-      {/* Form reply footer */}
-      {showFormFooter && (
-        <footer className="sticky bottom-0 z-20 border-t border-white/6 bg-[color-mix(in_srgb,var(--form-bg)_80%,transparent)] backdrop-blur-xl">
-          <div className="mx-auto w-full max-w-2xl px-5 py-4">
-            {editingField && (
-              <p className="mb-2 flex items-center justify-between gap-3 text-xs">
-                <span className="flex min-w-0 items-center gap-1.5 text-(--form-text-muted)">
-                  <Pencil className="size-3 shrink-0" />
-                  <span className="truncate">Editing: {editingField.label}</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingFieldId(null);
-                    setFieldError(null);
-                  }}
-                  className="shrink-0 cursor-pointer text-(--form-text-muted) underline-offset-2 transition-colors hover:text-(--form-text-primary) hover:underline"
-                >
-                  Cancel
-                </button>
-              </p>
-            )}
-            {fieldError && (
-              <p role="alert" className="mb-2 text-xs font-medium text-(--form-accent)">
-                {fieldError}
-              </p>
-            )}
-            {editingField ? (
-              <ReplyArea
-                key={`edit-${editingField.id}`}
-                field={editingField}
-                disabled={submitMutation.isPending}
-                pending={submitMutation.isPending}
-                initialValue={form.getValues(editingField.id)}
-                onSubmit={handleEditSubmit}
-              />
-            ) : (
-              current && (
-                <ReplyArea
-                  key={current.id}
-                  field={current}
-                  disabled={typing || submitMutation.isPending}
-                  pending={submitMutation.isPending}
-                  onSubmit={validateAndAdvance}
-                />
-              )
-            )}
-          </div>
-        </footer>
-      )}
-
-      {/* Debrief reply footer */}
-      {showDebriefFooter && currentDebriefField && (
-        <footer className="sticky bottom-0 z-20 border-t border-white/6 bg-[color-mix(in_srgb,var(--form-bg)_80%,transparent)] backdrop-blur-xl">
-          <div className="mx-auto w-full max-w-2xl px-5 py-4">
-            <p className="mb-2 flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-widest">
-              <span className="flex items-center gap-1.5 text-(--form-ai-accent)">
-                <Sparkles className="size-3" />
-                AI follow-up ·{" "}
-                {String(debrief.tag === "active" ? debrief.index + 1 : 1).padStart(2, "0")} /{" "}
-                {String(eligibleFollowupFields.length).padStart(2, "0")}
-              </span>
-              {remainingFollowups > 1 && (
-                <button
-                  type="button"
-                  onClick={() => void handleSkipAll()}
-                  className="cursor-pointer text-(--form-text-muted) underline-offset-2 transition-colors hover:text-(--form-text-primary) hover:underline"
-                >
-                  Skip all
-                </button>
-              )}
-            </p>
-            <FollowupReplyArea
-              key={currentDebriefField.id}
-              onSubmit={(a) => void handleDebriefAnswer(currentDebriefField.id, a)}
-              onSkip={() => void handleDebriefAnswer(currentDebriefField.id, null)}
-              pending={saveFollowupsMutation.isPending}
-            />
-          </div>
-        </footer>
-      )}
-
-      {/* Waiting on AI to finish streaming before showing debrief input */}
-      {debrief.tag === "active" && waitingOnAi && (
-        <footer className="sticky bottom-0 z-20 border-t border-white/6 bg-[color-mix(in_srgb,var(--form-bg)_80%,transparent)] backdrop-blur-xl">
-          <div className="mx-auto flex w-full max-w-2xl items-center justify-between px-5 py-4">
-            <div className="flex items-center gap-2 text-xs text-(--form-ai-accent)">
-              <Loader2 className="size-3.5 animate-spin" />
-              AI is thinking…
-            </div>
-            <div className="flex items-center gap-2">
-              {remainingFollowups > 1 && (
-                <Button
-                  type="button"
-                  onClick={() => void handleSkipAll()}
-                  className="cursor-pointer rounded-full px-3 py-1.5 text-xs text-(--form-text-muted) transition-colors hover:text-(--form-text-primary)"
-                >
-                  Skip all
-                </Button>
-              )}
-              {currentDebriefField && (
-                <Button
-                  type="button"
-                  onClick={() => void handleDebriefAnswer(currentDebriefField.id, null)}
-                  className="cursor-pointer rounded-full border border-white/8 px-3 py-1.5 text-xs text-(--form-text-muted) transition-colors hover:border-white/20 hover:text-(--form-text-primary)"
-                >
-                  Skip
-                </Button>
-              )}
-            </div>
-          </div>
-        </footer>
-      )}
-
+      </div>
+      
       <Input
         unstyled
         ref={honeypotRef}
@@ -1161,6 +1267,28 @@ function ReplyArea({ field, disabled, pending, initialValue, onSubmit }: ReplyAr
         <TextReply
           field={field}
           inputType="number"
+          disabled={disabled}
+          initialValue={initialText}
+          onSubmit={onSubmit}
+        />
+      );
+    case "file_upload":
+      return <FileUploadReply field={field} disabled={disabled} onSubmit={onSubmit} />;
+    case "time":
+      return (
+        <TextReply
+          field={field}
+          inputType="time"
+          disabled={disabled}
+          initialValue={initialText}
+          onSubmit={onSubmit}
+        />
+      );
+    case "url":
+      return (
+        <TextReply
+          field={field}
+          inputType="url"
           disabled={disabled}
           initialValue={initialText}
           onSubmit={onSubmit}
@@ -1254,9 +1382,6 @@ function SendButton({
   );
 }
 
-const TEXT_INPUT_CLASS =
-  "min-w-0 flex-1 rounded-full border border-white/[0.08] bg-[var(--form-surface)] px-4 py-2.5 text-[15px] text-[var(--form-text-primary)] outline-none transition-colors placeholder:text-[var(--form-text-muted)] focus:border-[color-mix(in_srgb,var(--form-accent)_50%,transparent)] disabled:opacity-50";
-
 function TextReply({
   field,
   inputType,
@@ -1278,9 +1403,16 @@ function TextReply({
     if (!disabled) inputRef.current?.focus();
   }, [disabled]);
 
+  let Icon = FileText;
+  if (inputType === "email") Icon = Mail;
+  else if (inputType === "number") Icon = Hash;
+  else if (inputType === "date") Icon = Calendar;
+  else if (inputType === "time") Icon = Clock;
+  else if (inputType === "url") Icon = Link2;
+
   return (
     <form
-      className="flex items-center gap-2"
+      className="space-y-4 w-full"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit(value);
@@ -1289,24 +1421,191 @@ function TextReply({
       <label htmlFor={field.id} className="sr-only">
         {field.label}
       </label>
-      <Input
-        unstyled
-        ref={inputRef}
-        id={field.id}
-        type={inputType}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={ph || "Type your answer…"}
-        maxLength={field.config.maxLength as number | undefined}
-        min={field.config.min as number | undefined}
-        max={field.config.max as number | undefined}
-        disabled={disabled}
-        autoComplete="off"
-        aria-required={field.required}
-        className={cn(TEXT_INPUT_CLASS, "scheme-dark")}
-      />
-      <SendButton disabled={disabled} />
+      <div className="relative flex items-center w-full">
+        <Input
+          unstyled
+          ref={inputRef}
+          id={field.id}
+          type={inputType}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={ph || "Type your answer here..."}
+          maxLength={field.config.maxLength as number | undefined}
+          min={field.config.min as number | undefined}
+          max={field.config.max as number | undefined}
+          disabled={disabled}
+          autoComplete="off"
+          aria-required={field.required}
+          className="w-full bg-[#1e1f22] border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[var(--form-accent)] focus:ring-1 focus:ring-[var(--form-accent)]/20 transition-all scheme-dark"
+        />
+        <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+          <Icon className="size-4 text-zinc-500" />
+        </div>
+      </div>
+      <div className="flex items-center justify-start">
+        <Button
+          type="submit"
+          disabled={disabled || (field.required && !value.trim())}
+          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+        >
+          Next
+        </Button>
+      </div>
     </form>
+  );
+}
+
+function FileUploadReply({
+  field,
+  disabled,
+  onSubmit,
+}: {
+  field: Field;
+  disabled: boolean;
+  onSubmit: (v: unknown) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const maxSizeMb = (field.config?.maxSizeMb as number) ?? 10;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      if (selected.size > maxSizeMb * 1024 * 1024) {
+        alert(`File size exceeds the maximum limit of ${maxSizeMb}MB`);
+        return;
+      }
+      setFile(selected);
+      setUploading(true);
+      setProgress(0);
+      setFileUrl(null);
+
+      const formData = new FormData();
+      formData.append("file", selected);
+
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener("progress", (evt) => {
+          if (evt.lengthComputable) {
+            const pct = Math.round((evt.loaded / evt.total) * 100);
+            setProgress(pct);
+          }
+        });
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status === 200) {
+            try {
+              const res = JSON.parse(xhr.responseText) as { url: string };
+              setFileUrl(res.url);
+            } catch {
+              alert("Failed to parse server response");
+              setFile(null);
+            }
+          } else {
+            alert("Upload failed. Please try again.");
+            setFile(null);
+          }
+          setUploading(false);
+        });
+
+        xhr.addEventListener("error", () => {
+          alert("Upload failed. Please try again.");
+          setFile(null);
+          setUploading(false);
+        });
+
+        xhr.open("POST", "/api/upload");
+        xhr.send(formData);
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert("Upload failed. Please try again.");
+        setFile(null);
+        setUploading(false);
+      }
+    }
+  };
+
+  const handleRemove = () => {
+    setFile(null);
+    setFileUrl(null);
+    setProgress(0);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <div className="space-y-4 w-full">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        disabled={disabled || uploading}
+        className="hidden"
+        id={`file-input-${field.id}`}
+      />
+      
+      {!file ? (
+        <label
+          htmlFor={`file-input-${field.id}`}
+          className={cn(
+            "flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl p-8 bg-[#1e1f22] cursor-pointer hover:border-[var(--form-accent)]/40 hover:bg-white/[0.01] transition-all",
+            (disabled || uploading) && "pointer-events-none opacity-40"
+          )}
+        >
+          <Upload className="size-8 text-zinc-500 mb-3" />
+          <span className="text-sm font-medium text-white">Click to upload or drag &amp; drop</span>
+          <span className="text-xs text-zinc-500 mt-1">Maximum file size: {maxSizeMb}MB</span>
+        </label>
+      ) : (
+        <div className="border border-white/10 rounded-xl p-4 bg-[#1e1f22] flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">{file.name}</p>
+            <p className="text-xs text-zinc-500">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+            {(uploading || progress > 0) && (
+              <div className="w-full bg-white/5 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div
+                  className="bg-[var(--form-accent)] h-1.5 rounded-full transition-all duration-150"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
+            {fileUrl && (
+              <p className="text-[10px] text-emerald-400 mt-1.5 font-mono truncate">
+                Saved! URL: {fileUrl}
+              </p>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleRemove}
+            disabled={disabled || uploading}
+            className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2.5 rounded-lg border-0"
+          >
+            Remove
+          </Button>
+        </div>
+      )}
+
+      <div className="flex items-center justify-start">
+        <Button
+          type="button"
+          onClick={() => {
+            if (fileUrl) {
+              onSubmit(fileUrl);
+            }
+          }}
+          disabled={disabled || uploading || !fileUrl || (field.required && !fileUrl)}
+          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+        >
+          Next
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -1331,7 +1630,7 @@ function LongTextReply({
 
   return (
     <form
-      className="flex items-end gap-2"
+      className="space-y-4 w-full"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit(value);
@@ -1352,14 +1651,22 @@ function LongTextReply({
             onSubmit(value);
           }
         }}
-        placeholder={ph || "Type your answer…"}
+        placeholder={ph || "Type your answer here..."}
         maxLength={field.config.maxLength as number | undefined}
-        rows={1}
+        rows={3}
         disabled={disabled}
         aria-required={field.required}
-        className="max-h-32 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border border-white/8 bg-(--form-surface) px-4 py-2.5 text-[15px] leading-relaxed text-(--form-text-primary) outline-none transition-colors field-sizing-content placeholder:text-(--form-text-muted) focus:border-[color-mix(in_srgb,var(--form-accent)_50%,transparent)] disabled:opacity-50"
+        className="w-full bg-[#1e1f22] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[var(--form-accent)] focus:ring-1 focus:ring-[var(--form-accent)]/20 transition-all resize-none overflow-y-auto"
       />
-      <SendButton disabled={disabled} />
+      <div className="flex items-center justify-start">
+        <Button
+          type="submit"
+          disabled={disabled || (field.required && !value.trim())}
+          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+        >
+          Next
+        </Button>
+      </div>
     </form>
   );
 }
@@ -1374,17 +1681,17 @@ function SingleChoiceReply({
   onSubmit: (v: unknown) => void;
 }) {
   return (
-    <div role="group" aria-label={field.label} className="flex flex-wrap gap-2">
+    <div role="group" aria-label={field.label} className="flex flex-col gap-2 w-full">
       {optionsOf(field).map((opt) => (
-        <Button
+        <button
           type="button"
           key={opt.id}
           disabled={disabled}
           onClick={() => onSubmit(opt.id)}
-          className="cursor-pointer rounded-full border border-[color-mix(in_srgb,var(--form-accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--form-accent)_6%,transparent)] px-4 py-2 text-sm text-(--form-text-primary) transition-all hover:border-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_15%,transparent)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full text-left p-3 rounded-xl border border-white/5 bg-[#1e1f22] text-zinc-355 hover:border-[var(--form-accent)] hover:bg-white/5 transition-all text-xs font-medium cursor-pointer disabled:opacity-40"
         >
           {opt.label}
-        </Button>
+        </button>
       ))}
     </div>
   );
@@ -1409,39 +1716,42 @@ function MultipleChoiceReply({
   }
   return (
     <form
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-4 w-full"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit(selected);
       }}
     >
-      <div role="group" aria-label={field.label} className="flex flex-wrap gap-2">
+      <div role="group" aria-label={field.label} className="flex flex-col gap-2 w-full">
         {optionsOf(field).map((opt) => {
           const on = selected.includes(opt.id);
           return (
-            <Button
+            <button
               type="button"
               key={opt.id}
               disabled={disabled}
-              aria-pressed={on}
               onClick={() => toggle(opt.id)}
               className={cn(
-                "cursor-pointer rounded-full border px-4 py-2 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-40",
+                "w-full text-left p-3 rounded-xl border text-xs font-medium transition-all cursor-pointer disabled:opacity-40 flex items-center justify-between",
                 on
-                  ? "border-(--form-accent) bg-(--form-accent) text-(--form-text-on-accent)"
-                  : "border-[color-mix(in_srgb,var(--form-accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--form-accent)_6%,transparent)] text-(--form-text-primary) hover:border-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_15%,transparent)]",
+                  ? "border-[var(--form-accent)] bg-[var(--form-accent)]/10 text-white"
+                  : "border-white/5 bg-[#1e1f22] text-[#dbdee1] hover:border-[var(--form-accent)] hover:bg-white/5"
               )}
             >
-              {opt.label}
-            </Button>
+              <span>{opt.label}</span>
+              {on && <Check className="size-3.5 text-[var(--form-accent)]" />}
+            </button>
           );
         })}
       </div>
-      <div className="flex justify-end">
-        <SendButton
+      <div>
+        <Button
+          type="submit"
           disabled={disabled || (field.required && selected.length === 0)}
-          pending={pending}
-        />
+          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+        >
+          {pending ? <Loader2 className="size-3.5 animate-spin" /> : "Next"}
+        </Button>
       </div>
     </form>
   );
@@ -1458,35 +1768,48 @@ function RatingReply({
 }) {
   const scale = (field.config.scale as number) ?? 5;
   const style = (field.config.style as "star" | "number") ?? "star";
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [hover, setHover] = useState(0);
+
   return (
-    <div role="group" aria-label={`Rating out of ${scale}`} className="flex flex-wrap gap-2">
-      {Array.from({ length: scale }, (_, i) => i + 1).map((n) => {
-        const active = n <= hover;
-        return (
-          <Button
-            key={n}
-            type="button"
-            disabled={disabled}
-            aria-label={`${n} out of ${scale}`}
-            onMouseEnter={() => setHover(n)}
-            onMouseLeave={() => setHover(0)}
-            onClick={() => onSubmit(n)}
-            className={cn(
-              "flex size-11 cursor-pointer items-center justify-center rounded-xl border transition-all disabled:cursor-not-allowed disabled:opacity-40",
-              active
-                ? "border-(--form-accent) bg-[color-mix(in_srgb,var(--form-accent)_15%,transparent)] text-(--form-accent)"
-                : "border-white/8 bg-(--form-surface) text-(--form-text-muted) hover:border-[color-mix(in_srgb,var(--form-accent)_50%,transparent)]",
-            )}
-          >
-            {style === "star" ? (
-              <Star className={cn("size-5", active && "fill-(--form-accent)")} />
-            ) : (
-              <span className="text-sm font-medium">{n}</span>
-            )}
-          </Button>
-        );
-      })}
+    <div className="space-y-4 w-full">
+      <div role="group" aria-label={`Rating out of ${scale}`} className="flex flex-wrap gap-2">
+        {Array.from({ length: scale }, (_, i) => i + 1).map((n) => {
+          const active = n <= (hover || selectedRating || 0);
+          return (
+            <button
+              key={n}
+              type="button"
+              disabled={disabled}
+              onMouseEnter={() => setHover(n)}
+              onMouseLeave={() => setHover(0)}
+              onClick={() => setSelectedRating(n)}
+              className={cn(
+                "flex size-11 items-center justify-center rounded-xl border transition-all cursor-pointer disabled:opacity-40",
+                active
+                  ? "border-[var(--form-accent)] bg-[var(--form-accent)]/10 text-[var(--form-accent)] shadow-sm"
+                  : "border-white/5 bg-[#1e1f22] text-zinc-400 hover:border-[var(--form-accent)]/50"
+              )}
+            >
+              {style === "star" ? (
+                <Star className={cn("size-5", active && "fill-[var(--form-accent)]")} />
+              ) : (
+                <span className="text-sm font-semibold">{n}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <div>
+        <Button
+          type="button"
+          onClick={() => selectedRating && onSubmit(selectedRating)}
+          disabled={disabled || (field.required && selectedRating === null)}
+          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 }

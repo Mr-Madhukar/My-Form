@@ -9,6 +9,9 @@ import { SingleChoicePanel } from "./panels/single-choice-panel";
 import { MultipleChoicePanel } from "./panels/multiple-choice-panel";
 import { RatingPanel } from "./panels/rating-panel";
 import { DatePanel } from "./panels/date-panel";
+import { FileUploadPanel } from "./panels/file-upload-panel";
+import { TimePanel } from "./panels/time-panel";
+import { UrlPanel } from "./panels/url-panel";
 import { ConditionalPanel } from "./panels/conditional-panel";
 import { ThemePanel } from "./theme-panel";
 import type { FieldCondition } from "@repo/forms";
@@ -46,6 +49,12 @@ export function PropertyPanel() {
     <RatingPanel field={field} />
   ) : field.type === "date" ? (
     <DatePanel field={field} />
+  ) : field.type === "file_upload" ? (
+    <FileUploadPanel field={field} />
+  ) : field.type === "time" ? (
+    <TimePanel field={field} />
+  ) : field.type === "url" ? (
+    <UrlPanel field={field} />
   ) : null;
 
   return (

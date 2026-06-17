@@ -75,6 +75,18 @@ export function zodForField(field: FieldForValidation): z.ZodTypeAny {
       schema = z.string(required ? REQUIRED : undefined);
       break;
     }
+    case "file_upload": {
+      schema = z.string(required ? REQUIRED : undefined).url({ message: "Invalid file URL" });
+      break;
+    }
+    case "time": {
+      schema = z.string(required ? REQUIRED : undefined);
+      break;
+    }
+    case "url": {
+      schema = z.string(required ? REQUIRED : undefined).url({ message: "Invalid URL" });
+      break;
+    }
     default: {
       schema = z.unknown();
     }

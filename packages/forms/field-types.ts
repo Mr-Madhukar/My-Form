@@ -9,8 +9,12 @@ export const FIELD_TYPES = [
   "multiple_choice",
   "rating",
   "date",
+  "file_upload",
+  "time",
+  "url",
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
 
 export const fieldTypeSchema = z.enum(FIELD_TYPES);
+
