@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "prod"]).default("development"),
+  NODE_ENV: z.enum(["development", "prod", "production"])
+    .default("development")
+    .transform((val) => (val === "production" ? "prod" : val) as "development" | "prod"),
   LOGGER_LEVEL: z.enum(["error", "debug", "info"]).optional(),
 });
 

@@ -9,7 +9,7 @@ import { env } from "../../env";
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
 
-const IS_PROD = (process.env.NODE_ENV as string) === "prod";
+const IS_PROD = env.NODE_ENV === "prod";
 const domainOpt = env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {};
 
 const COOKIE_OPTS_ACCESS = {
