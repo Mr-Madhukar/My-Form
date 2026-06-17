@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import logoImg from "~/public/logo.png";
 
 export function LandingFooter() {
   return (
@@ -7,11 +8,11 @@ export function LandingFooter() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 sm:flex-row sm:justify-between">
         <div className="flex flex-col items-center gap-2 sm:items-start">
           <Image
-            src="/logo.png"
+            src={logoImg}
             alt="My Form"
             width={88}
             height={22}
-            className="object-contain opacity-60"
+            className="object-contain opacity-60 logo-img"
           />
           <p className="font-mono text-[11px] text-[#6B6B6B]">
             &copy; {new Date().getFullYear()} My Form. All rights reserved.

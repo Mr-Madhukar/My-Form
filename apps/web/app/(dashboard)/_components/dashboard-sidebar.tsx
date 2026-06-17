@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import logoImg from "~/public/logo.png";
 import {
   LayoutGrid,
   LogOut,
@@ -14,7 +15,10 @@ import {
   Settings,
   Copy,
   Check,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { trpc } from "~/trpc/client";
 import { useAuthStore } from "~/stores/auth";
 import { cn } from "~/lib/utils";
@@ -89,6 +93,13 @@ function DashboardSidebarContent() {
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
 
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const updateWorkspace = trpc.workspaces.update.useMutation({
     onSuccess: (updated) => {
       utils.workspaces.listMine.invalidate();
@@ -120,13 +131,15 @@ function DashboardSidebarContent() {
       <SidebarHeader className="p-0">
         {/* Wordmark logo */}
         <div className="flex h-14 items-center border-b border-zinc-900/60 px-5 shrink-0">
-          <Image
-            src="/logo.png"
-            alt="My Form"
-            width={100}
-            height={25}
-            className="object-contain"
-          />
+          <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
+            <Image
+              src={logoImg}
+              alt="My Form"
+              width={100}
+              height={25}
+              className="object-contain logo-img"
+            />
+          </Link>
         </div>
 
         {/* Workspace selector */}
@@ -224,20 +237,39 @@ function DashboardSidebarContent() {
                 </div>
               </div>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Sign out"
-                    onClick={logout}
-                    className="shrink-0 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-                  >
-                    <LogOut className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Sign out</TooltipContent>
-              </Tooltip>
+              <div className="flex items-center gap-1">
+                {mounted && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Toggle theme"
+                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                        className="shrink-0 text-zinc-500 hover:text-zinc-200 hover:bg-white/6"
+                      >
+                        {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{theme === "dark" ? "Light mode" : "Dark mode"}</TooltipContent>
+                  </Tooltip>
+                )}
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Sign out"
+                      onClick={logout}
+                      className="shrink-0 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                    >
+                      <LogOut className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sign out</TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           </div>
         )}
@@ -381,7 +413,9 @@ export function MobileNav() {
 
   return (
     <div className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-900 bg-[#080808] px-4 md:hidden">
-      <Image src="/logo.png" alt="My Form" width={100} height={25} className="object-contain" />
+      <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
+        <Image src={logoImg} alt="My Form" width={100} height={25} className="object-contain logo-img" />
+      </Link>
       <SidebarTrigger className="text-zinc-500 hover:bg-zinc-900/60 hover:text-zinc-200" />
     </div>
   );

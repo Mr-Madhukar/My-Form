@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { FinalCta } from "./final-cta";
 import { LandingFaq } from "./faq";
 import { Hero } from "./hero";
@@ -12,6 +13,13 @@ import { Testimonials } from "./testimonials";
 import { WedgeShowcase } from "./wedge-showcase";
 
 export function LandingPage() {
+  useEffect(() => {
+    document.documentElement.classList.add("homepage-dark");
+    return () => {
+      document.documentElement.classList.remove("homepage-dark");
+    };
+  }, []);
+
   return (
     <main className="relative min-h-[100dvh] overflow-hidden bg-[#080808] text-[#F2F2F2]">
       {/* Background Lighting Flares */}

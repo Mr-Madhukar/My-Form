@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import logoImg from "~/public/logo.png";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +13,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* Wordmark */}
       <Link href="/" className="flex items-center transition-opacity duration-300 hover:opacity-80">
-        <Image src="/logo.png" alt="My Form" width={120} height={30} className="object-contain" />
+        <Image src={logoImg} alt="My Form" width={120} height={30} className="object-contain logo-img" />
       </Link>
 
       <div className="w-full max-w-md">{children}</div>

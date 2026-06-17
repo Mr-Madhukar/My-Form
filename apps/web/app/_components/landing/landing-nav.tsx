@@ -3,7 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import React from "react";
-import { Menu } from "lucide-react";
+import logoImg from "~/public/logo.png";
+import { Menu, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "~/components/ui/button";
 import {
   Sheet,
@@ -14,6 +16,7 @@ import {
   SheetTrigger,
 } from "~/components/ui/sheet";
 import { LandingButton } from "./landing-button";
+import { useAuthStore } from "~/stores/auth";
 
 const navLinks = [
   { href: "#preview", label: "Overview" },
@@ -25,6 +28,14 @@ const navLinks = [
 ];
 
 export function LandingNav() {
+  const { user, isLoading } = useAuthStore();
+  const [mounted, setMounted] = React.useState(false);
+  const { theme, setTheme } = useTheme();
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
@@ -50,11 +61,11 @@ export function LandingNav() {
         <nav className="relative flex h-12 items-center justify-between rounded-full bg-[#111] px-2 pl-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] border border-white/1">
           <Link href="/" className="flex items-center">
             <Image
-              src="/logo.png"
+              src={logoImg}
               alt="My Form"
               width={100}
               height={25}
-              className="object-contain"
+              className="object-contain logo-img"
             />
           </Link>
 
@@ -71,17 +82,27 @@ export function LandingNav() {
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="h-8 rounded-full text-xs text-[#6B6B6B] hover:bg-white/6 hover:text-[#F2F2F2] px-3.5"
-            >
-              <Link href="/login">Login</Link>
-            </Button>
-            <LandingButton href="/signup" size="sm">
-              Start free
-            </LandingButton>
+            {isLoading ? (
+              <div className="h-8 w-24 animate-pulse rounded-full bg-white/5" />
+            ) : user ? (
+              <LandingButton href="/forms" size="sm">
+                Dashboard
+              </LandingButton>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="h-8 rounded-full text-xs text-[#6B6B6B] hover:bg-white/6 hover:text-[#F2F2F2] px-3.5"
+                >
+                  <Link href="/login">Login</Link>
+                </Button>
+                <LandingButton href="/signup" size="sm">
+                  Start free
+                </LandingButton>
+              </>
+            )}
           </div>
 
           <div className="md:hidden flex items-center pr-1.5">
@@ -100,11 +121,11 @@ export function LandingNav() {
                 <SheetHeader>
                   <SheetTitle>
                     <Image
-                      src="/logo.png"
+                      src={logoImg}
                       alt="My Form"
                       width={100}
                       height={25}
-                      className="object-contain"
+                      className="object-contain logo-img"
                     />
                   </SheetTitle>
                 </SheetHeader>
@@ -120,16 +141,26 @@ export function LandingNav() {
                     </SheetClose>
                   ))}
                   <div className="mt-4 grid gap-2">
-                    <Button
-                      variant="outline"
-                      asChild
-                      className="rounded-full border-white/8 bg-white/3 text-[#F2F2F2]"
-                    >
-                      <Link href="/login">Login</Link>
-                    </Button>
-                    <LandingButton href="/signup" fullWidth>
-                      Start building
-                    </LandingButton>
+                    {isLoading ? (
+                      <div className="h-9 w-full animate-pulse rounded-xl bg-white/5" />
+                    ) : user ? (
+                      <LandingButton href="/forms" fullWidth>
+                        Dashboard
+                      </LandingButton>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          asChild
+                          className="rounded-full border-white/8 bg-white/3 text-[#F2F2F2]"
+                        >
+                          <Link href="/login">Login</Link>
+                        </Button>
+                        <LandingButton href="/signup" fullWidth>
+                          Start building
+                        </LandingButton>
+                      </>
+                    )}
                   </div>
                 </div>
               </SheetContent>

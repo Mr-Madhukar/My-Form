@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import logoImg from "~/public/logo.png";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowRight, Inbox, Layers, Loader2 } from "lucide-react";
+import { ArrowRight, Inbox, Layers, Loader2, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "~/components/ui/button";
 import { trpc } from "~/trpc/client";
 import { cn } from "~/lib/utils";
+import { useAuthStore } from "~/stores/auth";
 
 const ACCENT = "#E8854A";
 const EASE = "ease-[cubic-bezier(0.32,0.72,0,1)]";
@@ -144,6 +148,14 @@ function CardSkeleton({ index }: { index: number }) {
 }
 
 export default function ExplorePage() {
+  const { user, isLoading: authLoading } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const formsQuery = trpc.forms.public.listPublic.useQuery(undefined);
   const forms = formsQuery.data ?? [];
   const isLoading = formsQuery.isPending;
@@ -156,31 +168,60 @@ export default function ExplorePage() {
           <div className="flex h-12 items-center justify-between rounded-full bg-[#111] px-4 border border-white/1">
             <Link href="/" className="flex items-center">
               <Image
-                src="/logo.png"
+                src={logoImg}
                 alt="My Form"
                 width={100}
                 height={25}
-                className="object-contain"
+                className="object-contain logo-img"
               />
             </Link>
             <div className="flex items-center gap-2">
-              <Link
-                href="/login"
-                className="rounded-full px-3 py-1.5 text-xs font-medium text-[#6B6B6B] transition-colors duration-300 hover:text-[#F2F2F2]"
-              >
-                Login
-              </Link>
-              <Link
-                href="/signup"
-                className={cn(
-                  "rounded-full px-3.5 py-1.5 text-xs font-medium",
-                  "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20",
-                  `transition-all duration-300 ${EASE}`,
-                  "hover:bg-[#E8854A]/20",
-                )}
-              >
-                Start free
-              </Link>
+              {mounted && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Toggle theme"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="rounded-full text-[#6B6B6B] hover:bg-white/6 hover:text-[#F2F2F2] size-8 shrink-0 cursor-pointer"
+                >
+                  {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                </Button>
+              )}
+              {authLoading ? (
+                <div className="h-7 w-20 animate-pulse rounded-full bg-white/5" />
+              ) : user ? (
+                <Link
+                  href="/forms"
+                  className={cn(
+                    "rounded-full px-3.5 py-1.5 text-xs font-medium",
+                    "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20",
+                    `transition-all duration-300 ${EASE}`,
+                    "hover:bg-[#E8854A]/20",
+                  )}
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="rounded-full px-3 py-1.5 text-xs font-medium text-[#6B6B6B] transition-colors duration-300 hover:text-[#F2F2F2]"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className={cn(
+                      "rounded-full px-3.5 py-1.5 text-xs font-medium",
+                      "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20",
+                      `transition-all duration-300 ${EASE}`,
+                      "hover:bg-[#E8854A]/20",
+                    )}
+                  >
+                    Start free
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
