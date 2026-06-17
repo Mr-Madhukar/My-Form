@@ -1,10 +1,14 @@
 import { createOpenAI } from "@ai-sdk/openai";
 
-// Swap this export to change provider/model across all AI features.
-// To use Anthropic: import { createAnthropic } from "@ai-sdk/anthropic"
-// and replace with: createAnthropic()("claude-haiku-4-5-20251001")
-const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-export const aiModel = openai("gpt-5.4-mini");
+const apiKey = process.env.OPENAI_API_KEY;
+const isOpenRouter = apiKey?.startsWith("sk-or-");
+
+const openai = createOpenAI({
+  apiKey,
+  baseURL: isOpenRouter ? "https://openrouter.ai/api/v1" : undefined,
+});
+
+export const aiModel = openai(isOpenRouter ? "openai/gpt-4o-mini" : "gpt-4o-mini");
 
 export const FOLLOWUP_SYSTEM_PROMPT = `You are a curious, empathetic interviewer helping a form collect richer responses.
 The respondent just answered a question. Based on their answer, ask ONE short, natural follow-up question to learn more.
