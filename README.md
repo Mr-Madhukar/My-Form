@@ -1,49 +1,38 @@
 # My Form — AI-Native Form Builder SaaS
 
-A production-style Typeform-alternative built with Turborepo, tRPC, Zod, Drizzle ORM, and Scalar. Features conversational forms, AI follow-up questions, AI response summaries, and AI form generation.
+A production-ready conversational form builder (Typeform alternative) built with a modern TypeScript monorepo stack. Features conversational form runtimes, AI-driven follow-up questions, streaming response summaries, and natural language form generation.
 
 ---
 
-## Demo
+## 🚀 Live Demo
 
-| Item              | Value                                                    |
-| ----------------- | -------------------------------------------------------- |
-| **Live URL**      | `YOUR_DEPLOYED_URL_HERE`                                 |
-| **Demo email**    | `rithb8981@gmail.com`                                    |
-| **Demo password** | `Rithb@8981`                                             |
-| **Explore page**  | `/explore` — 3 themed public forms with seeded responses |
-| **API docs**      | `/docs` (Scalar)                                         |
+- **Live Web App:** [https://my-form-web.vercel.app](https://my-form-web.vercel.app)
+- **API Documentation:** [https://my-form-api-j20y.onrender.com/docs](https://my-form-api-j20y.onrender.com/docs)
+- **Public Form Gallery:** `/explore`
 
-### Quick Demo Walkthrough
-
-1. Visit the live URL and log in with the demo credentials above
-2. Browse the **Forms** dashboard — see the 3 seeded forms with response counts
-3. Click any form → **Responses** tab to see individual submissions
-4. Click **Analytics** tab to see pie charts, bar charts, and submission timeline
-5. Click **AI Summary** tab for an AI-generated analysis of responses
-6. Export responses as CSV from the Responses tab
-7. Visit `/explore` to see the public forms gallery
-8. Visit `/docs` for full Scalar API documentation
+### Test Credentials
+* **Demo Email:** `rithb8981@gmail.com`
+* **Demo Password:** `Rithb@8981`
 
 ---
 
-## Stack
+## 🛠️ Tech Stack
 
-| Layer         | Technology                                     |
-| ------------- | ---------------------------------------------- |
-| Monorepo      | Turborepo                                      |
-| Frontend      | Next.js 16, React 19, Tailwind CSS v4          |
-| Backend       | Express.js, tRPC v11                           |
-| Database      | PostgreSQL + Drizzle ORM                       |
-| Validation    | Zod                                            |
-| Auth          | JWT (access + refresh), bcryptjs, Google OAuth |
-| AI            | Vercel AI SDK + Claude                         |
-| Rate limiting | Redis (ioredis)                                |
-| API docs      | Scalar                                         |
+| Layer | Technology |
+|---|---|
+| **Monorepo** | Turborepo, pnpm |
+| **Frontend** | Next.js 16, React 19, Tailwind CSS v4, Recharts |
+| **Backend** | Express.js, tRPC v11 (Typesafe APIs) |
+| **Database** | PostgreSQL (Neon), Drizzle ORM |
+| **Authentication** | JWT (Access + Refresh tokens), Google OAuth |
+| **AI Integration** | Vercel AI SDK + Claude |
+| **Rate Limiting** | Redis (Upstash) |
+| **Validation** | Zod |
+| **Documentation** | Scalar (OpenAPI 3.0) |
 
 ---
 
-## Monorepo Structure
+## 📦 Project Structure
 
 ```
 my-form/
@@ -51,34 +40,42 @@ my-form/
 │   ├── web/          # Next.js 16 frontend (port 3000)
 │   └── api/          # Express backend (port 8123)
 └── packages/
-    ├── database/     # Drizzle schema, migrations, seed
-    ├── trpc/         # tRPC router definitions
+    ├── database/     # Drizzle schema, migrations, seed script
+    ├── trpc/         # Shared tRPC router definitions
     ├── services/     # Auth, email, token, Redis services
-    ├── forms/        # Field types, configs, Zod validators
-    └── logger/       # Shared logger
+    ├── forms/        # Form field types, config schemas, Zod validators
+    └── logger/       # Shared logging utility
 ```
 
 ---
 
-## Local Setup
+## ✨ Features
+
+- **Conversational Form Runner:** Interactive, keyboard-friendly full-page conversational forms at `/f/[slug]`.
+- **AI-Powered Capabilities:**
+  - Dynamic AI follow-up questions generated dynamically based on previous responses.
+  - Streaming AI response summaries/analytics for creators.
+  - Natural-language form generation from a simple text prompt.
+- **Robust Creator Dashboard:** Full CRUD operations on forms, drag-and-drop form designer (dnd-kit), response browser, and graphical analytics dashboard (recharts).
+- **Secure Authentication:** Cookie-based JWT auth with access & rotation refresh tokens, Resend-backed password resets, and Google Social Login.
+- **Enterprise-Grade Security:** Redis-backed request rate limiting, honeypot spam protection, and CORS configuration.
+
+---
+
+## 💻 Local Setup
 
 ### Prerequisites
-
 - Node.js 18+
 - pnpm 9+
-- PostgreSQL database
-- Redis instance
+- PostgreSQL & Redis instances
 
-### 1. Install dependencies
-
+### 1. Clone & Install
 ```bash
 pnpm install
 ```
 
-### 2. Configure environment
-
-Copy `.env` to each package that needs it (or set up a root `.env`):
-
+### 2. Environment Variables
+Create a `.env` in the root (matching `.env.example`):
 ```env
 DATABASE_URL=postgres://...
 REDIS_URL=redis://...
@@ -93,107 +90,29 @@ BASE_URL=http://localhost:8123
 NEXT_PUBLIC_API_URL=http://localhost:8123
 ```
 
-### 3. Run migrations
-
+### 3. Database Migration & Seeding
 ```bash
 pnpm db:migrate
-```
-
-### 4. Seed demo data
-
-Creates the demo user, workspace, and 3 themed forms with 55 seeded responses and AI follow-ups:
-
-```bash
 pnpm db:seed
 ```
+*Note: The seed script populates a default workspace, the demo user, and 3 rich demo forms (Anime Fan Survey, Startup Product Feedback, and Gamer Preferences Poll) with over 50 submissions and conversation history.*
 
-### 5. Start development
-
+### 4. Run Development Servers
 ```bash
 pnpm dev
 ```
-
-- Frontend: http://localhost:3000
-- API: http://localhost:8123
-- API docs: http://localhost:8123/docs
-
----
-
-## Features
-
-### Core
-
-- Email/password auth + Google OAuth
-- JWT access tokens (15min) + refresh tokens (7 days)
-- Email verification + password reset flow
-- Protected creator dashboard
-- Create, edit, publish, unpublish forms
-- Soft delete + restore
-
-### Forms
-
-- 8 field types: short text, long text, email, number, single choice, multiple choice, rating, date
-- Per-field required/optional toggle
-- Type-specific config validation (Zod)
-- Drag-and-drop field reordering (dnd-kit)
-- Version history (draft → published → archived)
-- Public (`public`) and unlisted (`unlisted`) visibility modes
-- Rate-limited public submission (10 req/60s per IP per form)
-- Honeypot spam protection
-
-### AI
-
-- AI follow-up questions on open-text answers (streaming, skippable)
-- AI response summary tab (streaming markdown)
-- AI form generation from natural language prompt
-
-### Public
-
-- `/f/[slug]` — conversational form runner, no login required
-- `/explore` — public forms gallery with bento grid layout
-
-### API
-
-- Full tRPC API + REST OpenAPI spec
-- Scalar API docs at `/docs`
+- **Web App:** `http://localhost:3000`
+- **Backend API:** `http://localhost:8123`
+- **Scalar Docs:** `http://localhost:8123/docs`
 
 ---
 
-## Seeded Demo Data
+## 📜 Available Scripts
 
-After running `pnpm db:seed`:
-
-| Form                     | Visibility | Responses |
-| ------------------------ | ---------- | --------- |
-| Anime Fan Survey 2025    | Public     | 20        |
-| Startup Product Feedback | Public     | 15        |
-| Gamer Preferences Poll   | Public     | 20        |
-
-All responses include realistic answers and AI follow-up conversations.
-
----
-
-## API Documentation
-
-Scalar docs: `{BASE_URL}/docs`  
-OpenAPI spec: `{BASE_URL}/openapi.json`
-
-Key public endpoints:
-
-- `GET /trpc/forms.public.listPublic` — list all public forms
-- `GET /trpc/forms.public.getBySlug` — get form by slug
-- `POST /trpc/forms.public.submit` — submit a response (rate limited)
-
----
-
-## Scripts
-
-```bash
-pnpm dev          # start all apps in dev mode
-pnpm build        # build all apps
-pnpm db:generate  # generate Drizzle migration
-pnpm db:migrate   # run migrations
-pnpm db:seed      # seed demo data
-pnpm lint         # lint all packages
-pnpm check-types  # typecheck all packages
-```
+- `pnpm dev` - Start all workspaces in watch/dev mode
+- `pnpm build` - Compile all apps and packages
+- `pnpm db:generate` - Generate new schema migrations with Drizzle
+- `pnpm db:migrate` - Apply pending migrations
+- `pnpm db:seed` - Seed mock data for development
+- `pnpm lint` - Run ESLint checks across packages
+- `pnpm check-types` - Validate TypeScript types across the monorepo
