@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "dotenv -- turbo build",
+    "build:render": "pnpm install --production=false && pnpm build",
     "dev": "dotenv -- turbo dev",
     "db:generate": "dotenv -- turbo db:generate",
     "db:migrate": "dotenv -- turbo db:migrate",
