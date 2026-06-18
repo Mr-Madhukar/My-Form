@@ -110,10 +110,16 @@ export const authRouter = router({
         fullName: z.string().min(1).max(80),
       }),
     )
-    .output(z.object({ message: z.string() }))
-    .mutation(async ({ input }) => {
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
       try {
-        return await authService.signup(input.email, input.password, input.fullName);
+        const { accessToken, refreshToken } = await authService.signup(
+          input.email,
+          input.password,
+          input.fullName,
+        );
+        setAuthCookies(ctx.res, accessToken, refreshToken);
+        return { success: true };
       } catch (e) {
         throw mapError(e);
       }

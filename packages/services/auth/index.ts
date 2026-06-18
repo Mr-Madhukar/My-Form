@@ -32,60 +32,38 @@ class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async signup(email: string, password: string, fullName: string): Promise<{ message: string }> {
+  async signup(email: string, password: string, fullName: string): Promise<AuthTokens> {
     const [existing] = await db
-      .select({ id: usersTable.id, emailVerified: usersTable.emailVerified })
+      .select({ id: usersTable.id })
       .from(usersTable)
       .where(eq(usersTable.email, email))
       .limit(1);
 
-    if (existing?.emailVerified) throw new Error("EMAIL_TAKEN");
+    if (existing) throw new Error("EMAIL_TAKEN");
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    let userId: string;
 
     await db.transaction(async (tx) => {
-      let userId: string;
+      const [user] = await tx
+        .insert(usersTable)
+        .values({ email, fullName, emailVerified: true })
+        .returning({ id: usersTable.id });
+      userId = user!.id;
 
-      if (existing) {
-        // Unverified user retrying signup — update credentials and re-issue token
-        userId = existing.id;
-        await tx
-          .update(userCredentialsTable)
-          .set({ passwordHash })
-          .where(eq(userCredentialsTable.userId, userId));
-        await tx
-          .update(emailVerificationTokensTable)
-          .set({ usedAt: new Date() })
-          .where(
-            and(
-              eq(emailVerificationTokensTable.userId, userId),
-              isNull(emailVerificationTokensTable.usedAt),
-            ),
-          );
-      } else {
-        const [user] = await tx
-          .insert(usersTable)
-          .values({ email, fullName, emailVerified: false })
-          .returning({ id: usersTable.id });
-        userId = user!.id;
-        await tx.insert(userCredentialsTable).values({ userId, passwordHash });
-        await tx
-          .insert(workspacesTable)
-          .values({ name: `${fullName}'s Workspace`, createdBy: userId })
-          .returning({ id: workspacesTable.id })
-          .then(([ws]) =>
-            tx.insert(workspaceMembersTable).values({ workspaceId: ws!.id, userId, role: "owner" }),
-          );
-      }
+      await tx.insert(userCredentialsTable).values({ userId, passwordHash });
 
-      await tx.insert(emailVerificationTokensTable).values({ userId, token, expiresAt });
+      const [workspace] = await tx
+        .insert(workspacesTable)
+        .values({ name: `${fullName}'s Workspace`, createdBy: userId })
+        .returning({ id: workspacesTable.id });
 
-      await emailService.sendVerificationEmail(email, token);
+      await tx
+        .insert(workspaceMembersTable)
+        .values({ workspaceId: workspace!.id, userId, role: "owner" });
     });
 
-    return { message: "Check your email to verify your account." };
+    return this.issueTokens(userId!);
   }
 
   async verifyEmail(token: string): Promise<AuthTokens> {

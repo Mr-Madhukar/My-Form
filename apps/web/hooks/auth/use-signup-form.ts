@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { trpc } from "~/trpc/client";
 import { env } from "~/env.js";
+import { useRouter } from "next/navigation";
 
 const schema = z
   .object({
@@ -23,11 +24,15 @@ const schema = z
 export type SignupFormData = z.infer<typeof schema>;
 
 export function useSignupForm() {
-  const [done, setDone] = useState(false);
+  const router = useRouter();
+  const utils = trpc.useUtils();
   const [formError, setFormError] = useState<string | null>(null);
 
   const mutation = trpc.auth.signup.useMutation({
-    onSuccess: () => setDone(true),
+    onSuccess: () => {
+      utils.auth.me.reset();
+      router.push("/forms");
+    },
     onError: (err) => {
       toast.error(err.message);
       setFormError(err.message);
@@ -57,7 +62,7 @@ export function useSignupForm() {
     errors: form.formState.errors,
     onSubmit,
     isPending: mutation.isPending,
-    done,
+    done: false,
     formError,
     googleOAuthUrl,
   };
