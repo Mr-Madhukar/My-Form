@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -41,9 +41,16 @@ export function useSignupForm() {
     mutation.mutate({ fullName, email, password });
   });
 
-  const googleOAuthUrl = env.NEXT_PUBLIC_API_URL
+  const defaultUrl = env.NEXT_PUBLIC_API_URL
     ? `${env.NEXT_PUBLIC_API_URL}/auth/google`
     : "/auth/google";
+  
+  const [googleOAuthUrl, setGoogleOAuthUrl] = useState(defaultUrl);
+
+  useEffect(() => {
+    const origin = window.location.origin;
+    setGoogleOAuthUrl(`${defaultUrl}?origin=${encodeURIComponent(origin)}`);
+  }, [defaultUrl]);
 
   return {
     register: form.register,

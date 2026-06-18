@@ -114,10 +114,24 @@ const isProd = env.NODE_ENV === "prod";
 const OAUTH_STATE_COOKIE = "oauth_state";
 const domainOpt = env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {};
 
+const OAUTH_FRONTEND_URL_COOKIE = "oauth_frontend_url";
+
 // Google OAuth routes
-app.get("/auth/google", authLimiter, async (_req, res) => {
+app.get("/auth/google", authLimiter, async (req, res) => {
   const { googleOAuth2Client } = await import("@repo/services/clients/google-oauth");
   const state = crypto.randomBytes(16).toString("hex");
+  
+  // Safe redirect validation to prevent open redirects
+  const origin = req.query.origin as string | undefined;
+  let frontendUrl = env.FRONTEND_URL;
+  if (origin) {
+    const isLocalhost = origin.startsWith("http://localhost:") || origin === "http://localhost";
+    const isProdFrontend = origin === env.FRONTEND_URL;
+    if (isLocalhost || isProdFrontend) {
+      frontendUrl = origin;
+    }
+  }
+
   res.cookie(OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
     secure: isProd,
@@ -126,6 +140,16 @@ app.get("/auth/google", authLimiter, async (_req, res) => {
     path: "/",
     ...domainOpt,
   });
+
+  res.cookie(OAUTH_FRONTEND_URL_COOKIE, frontendUrl, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+    maxAge: 10 * 60 * 1000,
+    path: "/",
+    ...domainOpt,
+  });
+
   const url = googleOAuth2Client.generateAuthUrl({
     scope: ["email", "profile"],
     access_type: "offline",
@@ -138,11 +162,13 @@ app.get("/auth/google/callback", authLimiter, async (req, res) => {
   const code = req.query.code as string | undefined;
   const returnedState = req.query.state as string | undefined;
   const storedState = req.cookies?.[OAUTH_STATE_COOKIE] as string | undefined;
+  const storedFrontendUrl = req.cookies?.[OAUTH_FRONTEND_URL_COOKIE] as string | undefined || env.FRONTEND_URL;
 
   res.clearCookie(OAUTH_STATE_COOKIE, { path: "/", ...domainOpt });
+  res.clearCookie(OAUTH_FRONTEND_URL_COOKIE, { path: "/", ...domainOpt });
 
   if (!code || !returnedState || !storedState || returnedState !== storedState) {
-    return res.redirect(`${env.FRONTEND_URL}/login?error=oauth_failed`);
+    return res.redirect(`${storedFrontendUrl}/login?error=oauth_failed`);
   }
 
   try {
@@ -163,10 +189,10 @@ app.get("/auth/google/callback", authLimiter, async (req, res) => {
       path: "/",
       ...domainOpt,
     });
-    return res.redirect(`${env.FRONTEND_URL}/forms`);
+    return res.redirect(`${storedFrontendUrl}/forms`);
   } catch (err) {
     logger.error("Google OAuth callback error", err);
-    return res.redirect(`${env.FRONTEND_URL}/login?error=oauth_failed`);
+    return res.redirect(`${storedFrontendUrl}/login?error=oauth_failed`);
   }
 });
 

@@ -51,9 +51,16 @@ export function useLoginForm() {
     mutation.mutate(data);
   });
 
-  const googleOAuthUrl = env.NEXT_PUBLIC_API_URL
+  const defaultUrl = env.NEXT_PUBLIC_API_URL
     ? `${env.NEXT_PUBLIC_API_URL}/auth/google`
     : "/auth/google";
+  
+  const [googleOAuthUrl, setGoogleOAuthUrl] = useState(defaultUrl);
+
+  useEffect(() => {
+    const origin = window.location.origin;
+    setGoogleOAuthUrl(`${defaultUrl}?origin=${encodeURIComponent(origin)}`);
+  }, [defaultUrl]);
 
   return {
     register: form.register,
