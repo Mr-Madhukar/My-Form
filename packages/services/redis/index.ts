@@ -1,7 +1,13 @@
 import Redis from "ioredis";
 import { env } from "../env";
 
-export const redisClient = new Redis(env.REDIS_URL);
+export const redisClient = new Redis(env.REDIS_URL, {
+  lazyConnect: true,
+});
+
+redisClient.on("error", () => {
+  // Silence unhandled connection errors
+});
 
 export async function rateLimit(
   key: string,
