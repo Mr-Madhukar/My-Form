@@ -1,6 +1,14 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "JWT_ACCESS_SECRET",
+    "NEXT_PUBLIC_API_URL",
+    "OPENAI_API_KEY",
+    "REDIS_URL",
+    "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN",
+    "NEXT_PUBLIC_POSTHOG_HOST"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

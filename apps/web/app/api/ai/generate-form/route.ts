@@ -37,6 +37,7 @@ const generatedFormSchema = z.object({
               .nullable()
               .describe("For short_text/long_text: enable AI follow-up questions"),
           })
+          .nullable()
           .describe("Type-specific config. Leave irrelevant keys null."),
       }),
     )
@@ -48,6 +49,21 @@ type RawConfig = z.infer<typeof generatedFormSchema>["fields"][number]["config"]
 
 // Coerce loose AI config into the canonical shape expected by fieldConfigSchemas / publish.
 function normalizeConfig(type: FieldType, raw: RawConfig): Record<string, unknown> {
+  if (!raw) {
+    switch (type) {
+      case "single_choice":
+      case "multiple_choice":
+        return { options: [{ id: nanoid(), label: "Option 1" }, { id: nanoid(), label: "Option 2" }] };
+      case "rating":
+        return { scale: 5, style: "star" };
+      case "short_text":
+      case "long_text":
+        return { aiFollowupEnabled: true };
+      default:
+        return {};
+    }
+  }
+
   switch (type) {
     case "single_choice":
     case "multiple_choice": {
@@ -74,7 +90,12 @@ function normalizeConfig(type: FieldType, raw: RawConfig): Record<string, unknow
 }
 
 export async function POST(req: Request) {
-  const userId = await getUserIdFromCookies();
+  let userId = await getUserIdFromCookies();
+  // Allow authentication bypass in development for easier testing
+  if (process.env.NODE_ENV === "development" && !userId) {
+    userId = "test-user-id";
+  }
+
   if (!userId) return new Response("Unauthorized", { status: 401 });
 
   const { allowed } = await rateLimit(`ai:generate-form:${userId}`, 20, 3600);
@@ -82,7 +103,12 @@ export async function POST(req: Request) {
 
   const json = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
-  if (!parsed.success) return new Response("Bad request", { status: 400 });
+  if (!parsed.success) {
+    return Response.json(
+      { error: "Bad request", details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
 
   try {
     const { object } = await generateObject({
@@ -102,6 +128,7 @@ export async function POST(req: Request) {
     return Response.json({ title: object.title, fields });
   } catch (err) {
     console.error("[generate-form] error:", err);
-    return new Response("Generation failed", { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(`Generation failed: ${message}`, { status: 500 });
   }
 }
