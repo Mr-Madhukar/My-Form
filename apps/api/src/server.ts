@@ -186,7 +186,7 @@ app.get("/auth/google/callback", authLimiter, async (req, res) => {
       60
     );
 
-    return res.redirect(`${storedFrontendUrl}/auth/callback?code=${tempCode}`);
+    return res.redirect(`${storedFrontendUrl}/callback?code=${tempCode}`);
   } catch (err) {
     logger.error("Google OAuth callback error", err);
     return res.redirect(`${storedFrontendUrl}/login?error=oauth_failed`);
