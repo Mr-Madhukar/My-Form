@@ -10,9 +10,9 @@ A production-ready conversational form builder (Typeform alternative) built with
 - **API Documentation:** [https://my-form-api-j20y.onrender.com/docs](https://my-form-api-j20y.onrender.com/docs)
 - **Public Form Gallery:** `/explore`
 
-### Test Credentials
-* **Demo Email:** `rithb8981@gmail.com`
-* **Demo Password:** `Rithb@8981`
+<!-- ### Test Credentials
+* **Demo Email:** `mrmadhukar@gmail.com`
+* **Demo Password:** `Madhukar@2002` -->
 
 ---
 

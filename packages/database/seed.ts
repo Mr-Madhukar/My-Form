@@ -1068,6 +1068,64 @@ async function seed() {
     console.log("  Workspace exists — skipping creation");
   }
 
+  // 1b. Upsert Madhukar user
+  const MADHUKAR_EMAIL = "mrmadhukar@gmail.com";
+  const MADHUKAR_PASSWORD = "Madhukar@2002";
+  const MADHUKAR_NAME = "Madhukar";
+
+  let [madhukarUser] = await db.select().from(usersTable).where(eq(usersTable.email, MADHUKAR_EMAIL)).limit(1);
+
+  if (!madhukarUser) {
+    console.log("  Creating Madhukar user…");
+    [madhukarUser] = await db
+      .insert(usersTable)
+      .values({ fullName: MADHUKAR_NAME, email: MADHUKAR_EMAIL, emailVerified: true })
+      .returning();
+
+    const passwordHash = await bcrypt.hash(MADHUKAR_PASSWORD, 12);
+    await db.insert(userCredentialsTable).values({ userId: madhukarUser!.id, passwordHash });
+  } else {
+    console.log("  Madhukar user exists — updating verification and password…");
+    await db.update(usersTable).set({ emailVerified: true }).where(eq(usersTable.id, madhukarUser.id));
+    const passwordHash = await bcrypt.hash(MADHUKAR_PASSWORD, 12);
+    
+    // Check if credential exists
+    const [existingCred] = await db
+      .select()
+      .from(userCredentialsTable)
+      .where(eq(userCredentialsTable.userId, madhukarUser.id))
+      .limit(1);
+
+    if (existingCred) {
+      await db
+        .update(userCredentialsTable)
+        .set({ passwordHash })
+        .where(eq(userCredentialsTable.id, existingCred.id));
+    } else {
+      await db.insert(userCredentialsTable).values({ userId: madhukarUser.id, passwordHash });
+    }
+  }
+
+  // 2b. Upsert Madhukar workspace
+  let [madhukarWorkspace] = await db
+    .select()
+    .from(workspacesTable)
+    .where(eq(workspacesTable.createdBy, madhukarUser!.id))
+    .limit(1);
+
+  if (!madhukarWorkspace) {
+    console.log("  Creating Madhukar workspace…");
+    [madhukarWorkspace] = await db
+      .insert(workspacesTable)
+      .values({ name: `${MADHUKAR_NAME}'s Workspace`, createdBy: madhukarUser!.id })
+      .returning();
+    await db
+      .insert(workspaceMembersTable)
+      .values({ workspaceId: madhukarWorkspace!.id, userId: madhukarUser!.id, role: "owner" });
+  } else {
+    console.log("  Madhukar workspace exists — skipping creation");
+  }
+
   // 3. Seed forms
   for (const formDef of FORMS) {
     // Idempotent: skip if a form with this title already exists in the workspace

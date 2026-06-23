@@ -173,23 +173,20 @@ app.get("/auth/google/callback", authLimiter, async (req, res) => {
 
   try {
     const { accessToken, refreshToken } = await authService.googleCallback(code);
-    res.cookie("access_token", accessToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000,
-      path: "/",
-      ...domainOpt,
-    });
-    res.cookie("refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-      ...domainOpt,
-    });
-    return res.redirect(`${storedFrontendUrl}/forms`);
+    
+    // Generate a temporary one-time authorization code
+    const tempCode = crypto.randomBytes(32).toString("hex");
+    
+    // Store tokens in Redis for 60 seconds
+    const key = `temp_auth_code:${tempCode}`;
+    await redisClient.set(
+      key,
+      JSON.stringify({ accessToken, refreshToken }),
+      "EX",
+      60
+    );
+
+    return res.redirect(`${storedFrontendUrl}/auth/callback?code=${tempCode}`);
   } catch (err) {
     logger.error("Google OAuth callback error", err);
     return res.redirect(`${storedFrontendUrl}/login?error=oauth_failed`);

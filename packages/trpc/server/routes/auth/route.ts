@@ -33,11 +33,19 @@ const COOKIE_OPTS_REFRESH = {
 function setAuthCookies(res: any, accessToken: string, refreshToken: string) {
   res.cookie("access_token", accessToken, COOKIE_OPTS_ACCESS);
   res.cookie("refresh_token", refreshToken, COOKIE_OPTS_REFRESH);
+  res.cookie("logged_in", "true", {
+    secure: IS_PROD,
+    sameSite: "lax" as const,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+    ...domainOpt,
+  });
 }
 
 function clearAuthCookies(res: any) {
   res.clearCookie("access_token", { path: "/", ...domainOpt });
   res.clearCookie("refresh_token", { path: "/", ...domainOpt });
+  res.clearCookie("logged_in", { path: "/", ...domainOpt });
 }
 
 function mapError(err: unknown): TRPCError {
@@ -77,6 +85,7 @@ function mapError(err: unknown): TRPCError {
     USER_NOT_FOUND: { code: "NOT_FOUND", message: "User not found." },
     GOOGLE_NO_EMAIL: { code: "BAD_REQUEST", message: "Google account has no email address." },
     NO_PASSWORD_SET: { code: "BAD_REQUEST", message: "No password set for this account. You signed in with OAuth." },
+    INVALID_TEMP_CODE: { code: "BAD_REQUEST", message: "Google sign-in session expired or invalid. Please try again." },
   };
   const mapped = map[msg];
   if (mapped) return new TRPCError(mapped);
@@ -151,6 +160,31 @@ export const authRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const { accessToken, refreshToken } = await authService.login(input.email, input.password);
+        setAuthCookies(ctx.res, accessToken, refreshToken);
+        return { success: true };
+      } catch (e) {
+        throw mapError(e);
+      }
+    }),
+
+  exchangeTempCode: publicProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/exchange-temp-code"), tags: TAGS } })
+    .input(
+      z.object({
+        code: z.string(),
+      }),
+    )
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const { redisClient } = await import("@repo/services/redis");
+        const key = `temp_auth_code:${input.code}`;
+        const dataStr = await redisClient.get(key);
+        if (!dataStr) {
+          throw new Error("INVALID_TEMP_CODE");
+        }
+        await redisClient.del(key);
+        const { accessToken, refreshToken } = JSON.parse(dataStr);
         setAuthCookies(ctx.res, accessToken, refreshToken);
         return { success: true };
       } catch (e) {

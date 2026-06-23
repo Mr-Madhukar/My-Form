@@ -1,15 +1,26 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "~/trpc/client";
 import { useAuthStore } from "~/stores/auth";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { _setUser, _setLoading, _setLogout, _setLogoutAll } = useAuthStore();
+  const [hasLoggedInCookie, setHasLoggedInCookie] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const exists = typeof document !== "undefined" && document.cookie.includes("logged_in=true");
+    setHasLoggedInCookie(exists);
+    if (!exists) {
+      _setUser(null);
+      _setLoading(false);
+    }
+  }, []);
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
+    enabled: hasLoggedInCookie === true,
   });
 
   const refreshMutation = trpc.auth.refreshToken.useMutation();
@@ -43,8 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [meQuery.error]);
 
   useEffect(() => {
+    if (hasLoggedInCookie === false) {
+      _setLoading(false);
+      return;
+    }
     _setLoading(meQuery.isLoading || refreshMutation.isPending);
-  }, [meQuery.isLoading, refreshMutation.isPending]);
+  }, [hasLoggedInCookie, meQuery.isLoading, refreshMutation.isPending]);
 
   useEffect(() => {
     _setLogout(async () => {
