@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSignupForm } from "~/hooks/auth";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { PasswordInput } from "~/components/ui/password-input";
 import { Field, FieldLabel, FieldDescription, FieldError } from "~/components/ui/field";
@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { IconBrandGoogle } from "@tabler/icons-react";
+import { cn } from "~/lib/utils";
 
 const bezelClass =
   "animate-fade-up rounded-[1.75rem] bg-white/[0.02] p-1.5 ring-1 ring-white/[0.06]";
@@ -37,7 +38,7 @@ export default function SignupPage() {
         <Card className={cardClass}>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl tracking-tight">Check your email</CardTitle>
-            <CardDescription className="text-[#6B6B6B]">
+            <CardDescription className="text-[#A3A3A3]">
               We sent a verification link to your inbox. Click it to activate your account. Don&apos;t
               forget to check your spam or junk folder if you don&apos;t see it.
             </CardDescription>
@@ -45,7 +46,7 @@ export default function SignupPage() {
           <CardFooter className="justify-center">
             <Link
               href="/login"
-              className="text-sm text-[#6B6B6B] transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-[#E8854A]"
+              className="text-sm text-[#A3A3A3] transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-[#E8854A]"
             >
               Back to sign in
             </Link>
@@ -60,7 +61,7 @@ export default function SignupPage() {
       <Card className={cardClass}>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl tracking-tight">Create your account</CardTitle>
-          <CardDescription className="text-[#6B6B6B]">
+          <CardDescription className="text-[#A3A3A3]">
             Enter your email below to create your account
           </CardDescription>
         </CardHeader>
@@ -88,7 +89,7 @@ export default function SignupPage() {
                 className={inputClass}
                 {...register("email")}
               />
-              <FieldDescription className="text-[#6B6B6B]">
+              <FieldDescription className="text-[#A3A3A3]">
                 We&apos;ll use this to contact you. We will not share your email with anyone else.
               </FieldDescription>
               <FieldError>{errors.email?.message}</FieldError>
@@ -119,7 +120,7 @@ export default function SignupPage() {
                 <FieldError>{errors.confirmPassword?.message}</FieldError>
               </Field>
             </div>
-            <p className="text-xs text-[#6B6B6B]">Must be at least 8 characters long.</p>
+            <p className="text-xs text-[#A3A3A3]">Must be at least 8 characters long.</p>
 
             {formError && (
               <p
@@ -139,19 +140,23 @@ export default function SignupPage() {
               <span className="w-full border-t border-white/8" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#111] px-2 text-[#6B6B6B]">Or continue with</span>
+              <span className="bg-[#111] px-2 text-[#A3A3A3]">Or continue with</span>
             </div>
           </div>
 
-          <Button variant="outline" type="button" asChild className={`w-full ${socialBtnClass}`}>
-            <a href={googleOAuthUrl}>
-              <IconBrandGoogle aria-hidden="true" />
-              Continue with Google
-            </a>
-          </Button>
+          <a
+            href={googleOAuthUrl}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              `w-full ${socialBtnClass}`
+            )}
+          >
+            <IconBrandGoogle aria-hidden="true" />
+            Continue with Google
+          </a>
         </CardContent>
         <CardFooter className="justify-center">
-          <p className="text-sm text-[#6B6B6B]">
+          <p className="text-sm text-[#A3A3A3]">
             Already have an account?{" "}
             <Link
               href="/login"

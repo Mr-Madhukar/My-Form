@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLoginForm } from "~/hooks/auth";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { PasswordInput } from "~/components/ui/password-input";
 import { Field, FieldLabel, FieldError } from "~/components/ui/field";
@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { IconBrandGoogle } from "@tabler/icons-react";
+import { cn } from "~/lib/utils";
 
 const bezelClass =
   "animate-fade-up rounded-[1.75rem] bg-white/[0.02] p-1.5 ring-1 ring-white/[0.06]";
@@ -37,7 +38,7 @@ function LoginForm() {
       <Card className={cardClass}>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl tracking-tight">Welcome back</CardTitle>
-          <CardDescription className="text-[#6B6B6B]">Login to your account</CardDescription>
+          <CardDescription className="text-[#A3A3A3]">Login to your account</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -55,13 +56,13 @@ function LoginForm() {
               />
               <FieldError>{errors.email?.message}</FieldError>
             </Field>
-
+ 
             <Field invalid={!!errors.password}>
               <div className="flex w-full items-center justify-between">
                 <FieldLabel>Password</FieldLabel>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-[#6B6B6B] transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-[#E8854A]"
+                  className="text-sm text-[#A3A3A3] transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-[#E8854A]"
                 >
                   Forgot your password?
                 </Link>
@@ -75,7 +76,7 @@ function LoginForm() {
               />
               <FieldError>{errors.password?.message}</FieldError>
             </Field>
-
+ 
             {formError && (
               <p
                 role="alert"
@@ -88,25 +89,29 @@ function LoginForm() {
               {isPending ? "Signing in..." : "Login"}
             </Button>
           </form>
-
+ 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-white/[0.08]" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#111] px-2 text-[#6B6B6B]">Or continue with</span>
+              <span className="bg-[#111] px-2 text-[#A3A3A3]">Or continue with</span>
             </div>
           </div>
-
-          <Button variant="outline" type="button" className={`w-full ${googleBtnClass}`} asChild>
-            <a href={googleOAuthUrl}>
-              <IconBrandGoogle aria-hidden="true" />
-              Continue with Google
-            </a>
-          </Button>
+ 
+          <a
+            href={googleOAuthUrl}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              `w-full ${googleBtnClass}`
+            )}
+          >
+            <IconBrandGoogle aria-hidden="true" />
+            Continue with Google
+          </a>
         </CardContent>
         <CardFooter className="justify-center">
-          <p className="text-sm text-[#6B6B6B]">
+          <p className="text-sm text-[#A3A3A3]">
             Don&apos;t have an account?{" "}
             <Link
               href="/signup"
@@ -120,7 +125,7 @@ function LoginForm() {
     </div>
   );
 }
-
+ 
 export default function LoginPage() {
   return (
     <Suspense
@@ -129,7 +134,7 @@ export default function LoginPage() {
           <Card className={`${cardClass} min-h-[460px] flex flex-col items-center justify-center`}>
             <div className="flex flex-col items-center gap-3">
               <span className="size-6 animate-spin rounded-full border-2 border-[#E8854A] border-t-transparent" />
-              <p className="text-sm text-[#6B6B6B]">Loading secure login...</p>
+              <p className="text-sm text-[#A3A3A3]">Loading secure login...</p>
             </div>
           </Card>
         </div>

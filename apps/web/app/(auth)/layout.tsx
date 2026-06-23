@@ -16,9 +16,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Image src={logoImg} alt="My Form" width={120} height={30} className="object-contain logo-img" />
       </Link>
 
-      <div className="w-full max-w-md">{children}</div>
+      <main className="w-full max-w-md">{children}</main>
 
-      <p className="max-w-xs text-center text-xs leading-relaxed text-[#6B6B6B]">
+      <p className="max-w-xs text-center text-xs leading-relaxed text-[#A3A3A3]">
         By clicking continue, you agree to our{" "}
         <Link
           href="/terms"
