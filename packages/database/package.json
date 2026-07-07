@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@repo/forms": "workspace:*",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "nanoid": "^5.1.5",

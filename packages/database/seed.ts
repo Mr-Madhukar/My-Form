@@ -16,9 +16,9 @@ import {
 } from "./schema";
 import { eq, and } from "drizzle-orm";
 
-const DEMO_EMAIL = "rithb8981@gmail.com";
-const DEMO_PASSWORD = "Rithb@8981";
-const DEMO_NAME = "Rith B";
+const DEMO_EMAIL = "madhukar@gmail.com";
+const DEMO_PASSWORD = "Madhukar@1";
+const DEMO_NAME = "Madhukar";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
