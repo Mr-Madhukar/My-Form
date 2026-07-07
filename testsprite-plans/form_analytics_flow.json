@@ -1,0 +1,27 @@
+{
+  "projectId": "2100f2ca-acd0-4fd6-92a8-f764a963c8ab",
+  "type": "frontend",
+  "name": "Form Analytics Flow — Creator can view submissions and responses charts",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://my-form.mrmadhukar.in/login"
+    },
+    {
+      "type": "action",
+      "description": "Enter the email 'mrmadhukar@gmail.com' in the email field and the password 'Madhukar@2002' in the password field, then log in"
+    },
+    {
+      "type": "action",
+      "description": "Click the first form card or the analytics view action for the first active form"
+    },
+    {
+      "type": "action",
+      "description": "Navigate to the analytics tab or sub-route ending in '/analytics'"
+    },
+    {
+      "type": "assertion",
+      "description": "The analytics view or completion graphs/charts are rendered on the page"
+    }
+  ]
+}

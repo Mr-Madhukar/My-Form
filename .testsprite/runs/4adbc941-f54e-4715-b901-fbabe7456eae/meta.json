@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "cli-v1",
+  "snapshotId": "snap_23807f8ad5f52cdf",
+  "testId": "799232f5-2421-4b5f-9568-1966e1b57b74",
+  "projectId": "2100f2ca-acd0-4fd6-92a8-f764a963c8ab",
+  "codeVersion": "v1",
+  "runIdIfAvailable": "4adbc941-f54e-4715-b901-fbabe7456eae",
+  "targetUrl": "https://my-form.mrmadhukar.in",
+  "failedStepIndex": 3,
+  "failureKind": null,
+  "capturedAt": "2026-07-07T18:22:28.483Z",
+  "fetchedAt": "2026-07-07T18:22:38.782Z"
+}

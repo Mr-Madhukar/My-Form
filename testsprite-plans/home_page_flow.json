@@ -1,0 +1,23 @@
+{
+  "projectId": "2100f2ca-acd0-4fd6-92a8-f764a963c8ab",
+  "type": "frontend",
+  "name": "Home Page — Loads successfully with key branding and CTAs",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://my-form.mrmadhukar.in/"
+    },
+    {
+      "type": "assertion",
+      "description": "The page title contains 'My Form' and the header logo element with alt text 'My Form' is present"
+    },
+    {
+      "type": "assertion",
+      "description": "The main heading text 'I want to build a' is visible on the page"
+    },
+    {
+      "type": "assertion",
+      "description": "The 'Create this form' button/link pointing to /signup is visible on the page"
+    }
+  ]
+}

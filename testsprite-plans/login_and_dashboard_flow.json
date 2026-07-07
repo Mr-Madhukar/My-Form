@@ -1,0 +1,27 @@
+{
+  "projectId": "2100f2ca-acd0-4fd6-92a8-f764a963c8ab",
+  "type": "frontend",
+  "name": "Dashboard Flow — User can login and view forms dashboard",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://my-form.mrmadhukar.in/login"
+    },
+    {
+      "type": "action",
+      "description": "Enter the email 'mrmadhukar@gmail.com' in the email field and the password 'Madhukar@2002' in the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the submit or login button to authenticate"
+    },
+    {
+      "type": "assertion",
+      "description": "The URL of the page changes to include '/forms', and the dashboard view is visible with user account info"
+    },
+    {
+      "type": "assertion",
+      "description": "The forms list or the header text 'Visual Response Workspace' is present on the page"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "testId": "799232f5-2421-4b5f-9568-1966e1b57b74",
+  "status": "blocked",
+  "startedAt": "2026-07-07T18:21:32.163Z",
+  "finishedAt": "2026-07-07T18:22:28.483Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/74381448-8031-70ba-b752-84dd6366e92c/1783448548268319//tmp/395fbac9-63cf-4c89-a7e4-990043c83ecf/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_23807f8ad5f52cdf",
+  "runIdIfAvailable": "4adbc941-f54e-4715-b901-fbabe7456eae",
+  "codeVersion": "v1",
+  "targetUrl": "https://my-form.mrmadhukar.in",
+  "targetUrlSource": "run",
+  "failedStepIndex": 3,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED: Results:\n- The Terms of Service page at https://my-form.mrmadhukar.in/terms was loaded and inspected.\n- Main heading found: \"Terms of Service\" (visible near the top of the page and present in the page text).\n- Section found: \"1. Acceptance of Terms\" (present as subsection heading in the page content).\n- Section found: \"Acceptable Use Policy\" (present as a separate section heading in the page content).\nAll required assertions from the use…"
+}

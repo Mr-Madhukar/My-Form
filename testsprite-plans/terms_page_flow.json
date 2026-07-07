@@ -1,0 +1,19 @@
+{
+  "projectId": "2100f2ca-acd0-4fd6-92a8-f764a963c8ab",
+  "type": "frontend",
+  "name": "Terms Page — Renders terms and acceptable use guidelines",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://my-form.mrmadhukar.in/terms"
+    },
+    {
+      "type": "assertion",
+      "description": "The main heading 'Terms of Service' is visible on the page"
+    },
+    {
+      "type": "assertion",
+      "description": "The sections '1. Acceptance of Terms' and 'Acceptable Use Policy' are present"
+    }
+  ]
+}

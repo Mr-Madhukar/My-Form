@@ -1,0 +1,19 @@
+{
+  "projectId": "2100f2ca-acd0-4fd6-92a8-f764a963c8ab",
+  "type": "frontend",
+  "name": "Login Page — Displays loading state and dynamic login card",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://my-form.mrmadhukar.in/login"
+    },
+    {
+      "type": "assertion",
+      "description": "The dynamic login container or the text 'Loading secure login...' is visible on the page"
+    },
+    {
+      "type": "assertion",
+      "description": "The logo element with alt text 'My Form' is present on the login view"
+    }
+  ]
+}

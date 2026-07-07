@@ -1,0 +1,27 @@
+{
+  "projectId": "2100f2ca-acd0-4fd6-92a8-f764a963c8ab",
+  "type": "frontend",
+  "name": "Form Designer Flow — Creator can open and view the form builder canvas",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://my-form.mrmadhukar.in/login"
+    },
+    {
+      "type": "action",
+      "description": "Enter the email 'mrmadhukar@gmail.com' in the email field and the password 'Madhukar@2002' in the password field, then log in"
+    },
+    {
+      "type": "action",
+      "description": "On the forms list dashboard, locate and click the edit link or card for the first active form"
+    },
+    {
+      "type": "assertion",
+      "description": "The URL changes to end with '/edit', showing that the builder view has loaded"
+    },
+    {
+      "type": "assertion",
+      "description": "The fields palette or sidebar showing options like 'Short text' and 'Rating Scale' is visible on the page"
+    }
+  ]
+}
