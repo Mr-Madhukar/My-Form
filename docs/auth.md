@@ -932,7 +932,7 @@ User submits new password → POST resetPassword
 | `packages/trpc/server/context.ts`           | Reads access_token cookie, attaches userId to every request   |
 | `apps/web/providers/auth.tsx`               | Frontend: loads user on mount, handles silent refresh         |
 | `apps/web/stores/auth.ts`                   | Frontend state: current user, logout functions                |
-| `apps/web/proxy.ts`                         | Next.js middleware: redirects unauthenticated users to /login |
+| `apps/web/middleware.ts`                  | Next.js middleware: redirects unauthenticated users to /login |
 
 ---
 
@@ -956,7 +956,7 @@ User submits new password → POST resetPassword
 8. `packages/trpc/server/trpc.ts` — add `protectedProcedure`
 9. `packages/trpc/server/routes/auth/route.ts` — expand the router
 10. `apps/api/src/server.ts` — add `cookieParser`, CORS with credentials, rate limiting, Google OAuth routes
-11. `apps/web/proxy.ts` — route guards
+11. `apps/web/middleware.ts` — route guards
 12. `apps/web/providers/auth.tsx` — auth context
 13. `apps/web/app/(auth)/**` — login/signup/etc pages
 
