@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/verify-email",
   "/forgot-password",
   "/reset-password",
+  "/callback",
   "/f/",
   "/terms",
   "/privacy",
@@ -14,13 +15,15 @@ const PUBLIC_PATHS = [
 
 const AUTH_PATHS = ["/login", "/signup"];
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip Next.js internals and static files
+  // Skip Next.js internals, static files, and proxied API routes
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
+    pathname.startsWith("/trpc") ||
+    pathname.startsWith("/auth") ||
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
   ) {
