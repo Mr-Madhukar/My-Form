@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 /**
  * Verifies the access_token cookie using JWT_ACCESS_SECRET, matching the API.
@@ -26,6 +26,21 @@ export async function getUserIdFromCookies(): Promise<string | null> {
   // 2. Backend verification fallback (handles out-of-sync secrets or missing Vercel env vars)
   try {
     const apiTarget = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    
+    // Prevent infinite loop if apiTarget is mistakenly set to the frontend URL/origin
+    try {
+      const currentHost = (await headers()).get("host");
+      if (currentHost) {
+        const targetUrl = new URL(apiTarget, `http://${currentHost}`);
+        if (targetUrl.host === currentHost) {
+          console.warn(`Loop detected in auth helper: apiTarget (${apiTarget}) matches current host (${currentHost}). Skipping backend verification fallback.`);
+          return null;
+        }
+      }
+    } catch (e) {
+      console.error("Error checking for proxy loop in auth helper:", e);
+    }
+
     const cookieStore = await cookies();
     const res = await fetch(`${apiTarget}/trpc/auth.me`, {
       headers: {
