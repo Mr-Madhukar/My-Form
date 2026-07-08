@@ -9,6 +9,8 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string(),
   REDIS_URL: z.string(),
   FRONTEND_URL: z.string(),
+  GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
+  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {

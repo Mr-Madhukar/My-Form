@@ -11,6 +11,7 @@ import {
 } from "@repo/database/schema";
 import db from "@repo/database";
 import { emailService } from "@repo/services/email";
+import { appendRowToSheet } from "@repo/services/clients/google-sheets";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { buildResponseSchema, themeSchema } from "@repo/forms";
@@ -230,6 +231,7 @@ export const formsPublicRouter = router({
 
       // Fire-and-forget: append to Google Sheets if connected
       if (form.googleSheetsConnected && form.googleSheetsSpreadsheetId) {
+        const spreadsheetId = form.googleSheetsSpreadsheetId;
         (async () => {
           try {
             const values = [
@@ -243,8 +245,12 @@ export const formsPublicRouter = router({
               }),
             ];
             console.log(
-              `[Google Sheets Sync] Syncing submission for form ${form.id} to sheet ${form.googleSheetsSpreadsheetId}:`,
+              `[Google Sheets Sync] Syncing submission for form ${form.id} to sheet ${spreadsheetId}:`,
               values,
+            );
+            await appendRowToSheet(spreadsheetId, values);
+            console.log(
+              `[Google Sheets Sync] Successfully synced submission for form ${form.id} to sheet ${spreadsheetId}`
             );
           } catch (err) {
             console.error("Failed to append submission to Google Sheets:", err);

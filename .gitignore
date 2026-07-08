@@ -59,6 +59,7 @@ prompt.md
 
 # Credentials — NEVER push
 cred.md
+my-form-*.json
 
 # Development plans (internal only)
 plans/
