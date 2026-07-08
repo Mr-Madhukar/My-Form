@@ -4,6 +4,7 @@ import "./globals.css";
 import { GlobalProviders } from "~/providers/global";
 import { cn } from "~/lib/utils";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body suppressHydrationWarning>
         <GlobalProviders>{children}</GlobalProviders>
+        <Analytics />
       </body>
     </html>
   );

@@ -24,6 +24,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-query": "^5.90.16",
     "@trpc/react-query": "^11.8.1",
+    "@vercel/analytics": "^2.0.1",
     "ai": "^6.0.203",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
