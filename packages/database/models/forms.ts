@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, timestamp, index, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, boolean, timestamp, index, pgEnum, text } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { workspacesTable } from "./workspaces";
 
@@ -15,6 +15,9 @@ export const formsTable = pgTable(
     isAcceptingResponses: boolean("is_accepting_responses").notNull().default(true),
     visibility: formVisibilityEnum("visibility").notNull().default("unlisted"),
     deletedAt: timestamp("deleted_at"),
+    googleSheetsConnected: boolean("google_sheets_connected").notNull().default(false),
+    googleSheetsSpreadsheetId: text("google_sheets_spreadsheet_id"),
+    googleSheetsSpreadsheetUrl: text("google_sheets_spreadsheet_url"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
   },

@@ -12,6 +12,7 @@ import {
   Lock,
   Eye,
   Share2,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "~/trpc/client";
@@ -296,6 +297,22 @@ export function EditorTopbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent>View responses</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="rounded-full text-[#6B6B6B] hover:bg-white/6 hover:text-[#F2F2F2] px-3 gap-1.5 text-xs font-medium"
+            >
+              <a href={`/forms/${formId}/integrations`} aria-label="Integrations">
+                <Link2 className="size-3.5" />
+                Integrations
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Integrations</TooltipContent>
         </Tooltip>
         {publicSlug && (
           <Tooltip>

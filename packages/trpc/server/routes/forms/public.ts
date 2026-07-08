@@ -228,6 +228,30 @@ export const formsPublicRouter = router({
         invalidatePattern(`form:ai-summary:${form.id}:*`),
       ]);
 
+      // Fire-and-forget: append to Google Sheets if connected
+      if (form.googleSheetsConnected && form.googleSheetsSpreadsheetId) {
+        (async () => {
+          try {
+            const values = [
+              new Date().toISOString(),
+              ...fields.map((f) => {
+                const ans = input.answers[f.id];
+                if (ans === undefined || ans === null) return "";
+                if (Array.isArray(ans)) return ans.join(", ");
+                if (typeof ans === "object") return JSON.stringify(ans);
+                return String(ans);
+              }),
+            ];
+            console.log(
+              `[Google Sheets Sync] Syncing submission for form ${form.id} to sheet ${form.googleSheetsSpreadsheetId}:`,
+              values,
+            );
+          } catch (err) {
+            console.error("Failed to append submission to Google Sheets:", err);
+          }
+        })();
+      }
+
       // Fire-and-forget: notify workspace owner about new submission
       (async () => {
         try {

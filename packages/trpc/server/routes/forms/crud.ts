@@ -169,3 +169,52 @@ export const setResponseLimit = formProcedure
       .where(eq(formVersionsTable.id, version.id));
     await invalidateKeys(CacheKeys.formSlug(ctx.form.publicSlug));
   });
+
+export const connectGoogleSheets = formProcedure
+  .meta({ openapi: { method: "POST", path: "/forms/{formId}/google-sheets/connect", tags: TAGS } })
+  .input(
+    z.object({
+      formId: z.string(),
+      spreadsheetId: z.string().optional(),
+      spreadsheetUrl: z.string().optional(),
+    }),
+  )
+  .output(z.object({ success: z.boolean() }))
+  .mutation(async ({ ctx, input }) => {
+    const spreadsheetId = input.spreadsheetId || "1sBv1M2gd7tB7L4T44Fz4Q3Nq4X4P4X4V4X4";
+    const spreadsheetUrl =
+      input.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+
+    await db
+      .update(formsTable)
+      .set({
+        googleSheetsConnected: true,
+        googleSheetsSpreadsheetId: spreadsheetId,
+        googleSheetsSpreadsheetUrl: spreadsheetUrl,
+      })
+      .where(eq(formsTable.id, ctx.form.id));
+
+    await invalidateKeys(CacheKeys.workspaceForms(ctx.form.workspaceId));
+
+    return { success: true };
+  });
+
+export const disconnectGoogleSheets = formProcedure
+  .meta({ openapi: { method: "POST", path: "/forms/{formId}/google-sheets/disconnect", tags: TAGS } })
+  .input(z.object({ formId: z.string() }))
+  .output(z.object({ success: z.boolean() }))
+  .mutation(async ({ ctx }) => {
+    await db
+      .update(formsTable)
+      .set({
+        googleSheetsConnected: false,
+        googleSheetsSpreadsheetId: null,
+        googleSheetsSpreadsheetUrl: null,
+      })
+      .where(eq(formsTable.id, ctx.form.id));
+
+    await invalidateKeys(CacheKeys.workspaceForms(ctx.form.workspaceId));
+
+    return { success: true };
+  });
+

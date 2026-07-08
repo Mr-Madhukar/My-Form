@@ -51,6 +51,9 @@ export const formWithVersionSchema = z.object({
     .enum(["public", "unlisted"])
     .describe("public = appears in explore; unlisted = link-only"),
   deletedAt: z.date().nullable().describe("Soft-delete timestamp; null if not deleted"),
+  googleSheetsConnected: z.boolean().describe("Whether Google Sheets sync is connected"),
+  googleSheetsSpreadsheetId: z.string().nullable().describe("ID of the sync spreadsheet"),
+  googleSheetsSpreadsheetUrl: z.string().nullable().describe("URL of the sync spreadsheet"),
   createdAt: z.date().describe("When the form was created"),
   version: versionSummarySchema.describe("Current draft version metadata"),
 });

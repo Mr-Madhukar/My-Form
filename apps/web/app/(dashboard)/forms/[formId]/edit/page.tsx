@@ -66,8 +66,8 @@ export default function EditorPage({ params }: { params: Promise<{ formId: strin
     }
   }
 
-  const formQuery = trpc.forms.get.useQuery({ formId });
-  const draftQuery = trpc.forms.versions.getDraft.useQuery({ formId });
+  const formQuery = trpc.forms.get.useQuery({ formId }, { staleTime: 0, refetchOnMount: "always" });
+  const draftQuery = trpc.forms.versions.getDraft.useQuery({ formId }, { staleTime: 0, refetchOnMount: "always" });
 
   useEffect(() => {
     if (!draftQuery.data) return;

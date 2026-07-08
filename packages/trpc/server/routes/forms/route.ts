@@ -13,6 +13,8 @@ export const formsRouter = router({
   setVisibility: crud.setVisibility,
   toggleAccepting: crud.toggleAccepting,
   setResponseLimit: crud.setResponseLimit,
+  connectGoogleSheets: crud.connectGoogleSheets,
+  disconnectGoogleSheets: crud.disconnectGoogleSheets,
   versions: formsVersionsRouter,
   public: formsPublicRouter,
   responses: formsResponsesRouter,

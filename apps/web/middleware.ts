@@ -30,6 +30,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/dashboard" || pathname === "/dashboard/") {
+    return NextResponse.redirect(new URL("/forms", request.url));
+  }
+
   const hasAccessToken = request.cookies.has("access_token");
   const isAuthenticated = hasAccessToken;
 

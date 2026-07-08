@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Inbox, Sparkles, BarChart3 } from "lucide-react";
+import { Inbox, Sparkles, BarChart3, Link2 } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 const EASE = "transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]";
 
-export function FormTabs({ formId, active }: { formId: string; active: "responses" | "summary" | "analytics" }) {
+export function FormTabs({
+  formId,
+  active,
+}: {
+  formId: string;
+  active: "responses" | "summary" | "analytics" | "integrations";
+}) {
   return (
     <div className="flex items-center gap-1 rounded-full bg-white/[0.04] p-1 ring-1 ring-white/[0.06]">
       <Link
@@ -47,6 +53,19 @@ export function FormTabs({ formId, active }: { formId: string; active: "response
       >
         <Sparkles className="size-3" />
         AI Summary
+      </Link>
+      <Link
+        href={`/forms/${formId}/integrations`}
+        className={cn(
+          "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+          EASE,
+          active === "integrations"
+            ? "bg-[#10B981]/20 text-[#10B981]"
+            : "text-[#6B6B6B] hover:text-[#10B981]",
+        )}
+      >
+        <Link2 className="size-3" />
+        Integrations
       </Link>
     </div>
   );
