@@ -29,6 +29,7 @@ RUN TURBO_UI=false pnpm turbo build --filter=@repo/api
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=prod
+ENV PORT=8123
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 apiuser
 
