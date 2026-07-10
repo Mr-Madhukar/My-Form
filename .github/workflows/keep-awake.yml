@@ -1,0 +1,23 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    # Runs every 10 minutes to keep the Render backend service from sleeping (15 mins inactivity limit)
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+
+jobs:
+  ping:
+    name: Ping Render Health Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend
+        run: |
+          echo "Pinging health endpoint..."
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://my-form-api.mrmadhukar.in/health)
+          echo "Response status code: $STATUS_CODE"
+          if [ "$STATUS_CODE" -eq 200 ] || [ "$STATUS_CODE" -eq 301 ] || [ "$STATUS_CODE" -eq 302 ]; then
+            echo "Success: Server is awake!"
+          else
+            echo "Warning: Health check returned status: $STATUS_CODE"
+          fi
