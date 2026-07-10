@@ -12,9 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render Backend
+        env:
+          RENDER_API_URL: ${{ secrets.RENDER_API_URL }}
         run: |
+          if [ -z "$RENDER_API_URL" ]; then
+            echo "Error: RENDER_API_URL secret is not set in GitHub repository secrets."
+            exit 1
+          fi
           echo "Pinging health endpoint..."
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://my-form-api.mrmadhukar.in/health)
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$RENDER_API_URL/health")
           echo "Response status code: $STATUS_CODE"
           if [ "$STATUS_CODE" -eq 200 ] || [ "$STATUS_CODE" -eq 301 ] || [ "$STATUS_CODE" -eq 302 ]; then
             echo "Success: Server is awake!"
