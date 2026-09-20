@@ -36,9 +36,10 @@ export async function POST(req: Request) {
     const groqFormData = new FormData();
     groqFormData.append("file", file, "audio.webm");
     groqFormData.append("model", "whisper-large-v3");
+    groqFormData.append("language", "hi");
     groqFormData.append("response_format", "json");
-    groqFormData.append("temperature", "0.2");
-    // Context prompt to help Whisper accurately transcribe Indian English, Hindi, and mixed Hinglish
+    groqFormData.append("temperature", "0.0");
+    // Context prompt to help Whisper output in Roman script (Hinglish) instead of Devanagari/Urdu
     groqFormData.append(
       "prompt",
       "Transcribe respondent voice answer accurately in natural spoken language, code-mixed Hinglish, Hindi, or English."
@@ -71,14 +72,14 @@ export async function POST(req: Request) {
       });
     }
 
-    // Smart cleanup using lightweight LLM: removes fillers ("uh", "um", "matlab") without altering language or slang
+    // Smart cleanup using lightweight LLM: removes fillers and ensures Roman script output
     let cleanedText = rawText;
     try {
       const polished = await generateText({
         model: aiModel,
         system:
-          "You are a speech-to-text transcript polisher. Remove accidental stuttering, repeated words, and vocal filler sounds (like 'uh', 'um', 'ah', 'matlab', 'actually', 'like', 'you know') while strictly preserving the speaker's original language, script, slang, phrasing, and intended meaning. Do NOT translate or rephrase. Output ONLY the polished text with proper capitalization and punctuation.",
-        prompt: `Raw speech transcription:\n"${rawText}"\n\nCleaned text:`,
+          "You are a speech-to-text transcript polisher. Your job:\n1. Remove stuttering, repeated words, and filler sounds ('uh', 'um', 'ah', 'matlab', 'actually', 'like', 'you know').\n2. If the text is in Devanagari (हिंदी), Urdu (اردو), or any non-Latin script, transliterate it to Roman Hinglish (e.g., 'mera naam Rahul hai').\n3. If already in English or Roman Hinglish, keep it as-is.\n4. Preserve the speaker's original meaning, slang, and phrasing. Do NOT translate Hindi to English.\n5. Output ONLY the final cleaned Roman-script text with proper capitalization and punctuation.",
+        prompt: `Raw speech transcription:\n"${rawText}"\n\nCleaned Roman-script text:`,
         maxOutputTokens: 250,
       });
 
