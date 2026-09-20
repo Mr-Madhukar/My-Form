@@ -11,6 +11,8 @@ const envSchema = z.object({
   FRONTEND_URL: z.string(),
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  GROQ_API_KEY: z.string().optional(),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {

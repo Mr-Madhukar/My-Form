@@ -9,11 +9,13 @@ import {
   FileSpreadsheet,
   AlertCircle,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { trpc } from "~/trpc/client";
 import { FormTabs } from "../_components/form-tabs";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
+import { cn } from "~/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +35,8 @@ export default function IntegrationsPage({ params }: { readonly params: Promise<
   const formQuery = trpc.forms.get.useQuery({ formId }, { staleTime: 0, refetchOnMount: "always" });
   const connectMutation = trpc.forms.connectGoogleSheets.useMutation();
   const disconnectMutation = trpc.forms.disconnectGoogleSheets.useMutation();
+  const leadScoringQuery = trpc.forms.getLeadScoring.useQuery({ formId });
+  const toggleLeadScoringMutation = trpc.forms.toggleLeadScoring.useMutation();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [spreadsheetUrlInput, setSpreadsheetUrlInput] = useState("");
@@ -42,6 +46,29 @@ export default function IntegrationsPage({ params }: { readonly params: Promise<
   const isConnected = form?.googleSheetsConnected ?? false;
   const sheetUrl = form?.googleSheetsSpreadsheetUrl;
   const sheetId = form?.googleSheetsSpreadsheetId;
+  const isLeadScoringEnabled = Boolean(leadScoringQuery.data?.enabled);
+
+  let scoringButtonContent: React.ReactNode = "Enable Scoring";
+  if (toggleLeadScoringMutation.isPending) {
+    scoringButtonContent = <Loader2 className="size-3 animate-spin" />;
+  } else if (isLeadScoringEnabled) {
+    scoringButtonContent = "Disable Scoring";
+  }
+
+  async function handleToggleLeadScoring() {
+    const next = !leadScoringQuery.data?.enabled;
+    try {
+      await toggleLeadScoringMutation.mutateAsync({ formId, enabled: next });
+      await leadScoringQuery.refetch();
+      toast.success(
+        next
+          ? "AI Lead Scoring enabled! Submissions will be analyzed automatically."
+          : "AI Lead Scoring disabled for this form.",
+      );
+    } catch {
+      toast.error("Failed to update AI Lead Scoring setting");
+    }
+  }
 
   async function handleConnect() {
     setConnecting(true);
@@ -131,6 +158,50 @@ export default function IntegrationsPage({ params }: { readonly params: Promise<
 
         {/* Integration list */}
         <div className="grid gap-6">
+          {/* AI Lead Scoring Integration */}
+          <div className="rounded-2xl border border-white/6 bg-white/1 p-6 transition-all duration-300 hover:border-white/10 hover:bg-white/2">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-400 ring-1 ring-orange-500/20">
+                  <Sparkles className="size-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-[#F2F2F2]">
+                      AI Lead Scoring & Intent Detection
+                    </h3>
+                    {leadScoringQuery.data?.enabled ? (
+                      <span className="rounded-full bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 font-mono text-[10px] font-bold text-orange-400">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-zinc-500">
+                        Disabled
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#6B6B6B] mt-1.5 leading-relaxed max-w-xl">
+                    Automatically evaluate every response with AI to calculate lead quality from 1–100, classify intent (High / Warm / Low), and highlight hot prospects directly in your responses dashboard.
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 flex items-center">
+                <Button
+                  onClick={handleToggleLeadScoring}
+                  disabled={toggleLeadScoringMutation.isPending}
+                  className={cn(
+                    "text-xs font-semibold rounded-xl min-w-32 cursor-pointer transition-all",
+                    isLeadScoringEnabled
+                      ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
+                      : "bg-[#E8854A] hover:bg-[#E8854A]/90 text-black",
+                  )}
+                >
+                  {scoringButtonContent}
+                </Button>
+              </div>
+            </div>
+          </div>
           <div className="rounded-2xl border border-white/6 bg-white/1 p-6 transition-all duration-300 hover:border-white/10 hover:bg-white/2">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
               <div className="flex items-start gap-4">

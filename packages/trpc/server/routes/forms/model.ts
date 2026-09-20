@@ -103,6 +103,10 @@ export const responseAnswerSchema = z.object({
 export const responseListItemSchema = z.object({
   id: z.string().describe("Response UUID"),
   completedAt: z.date().nullable().describe("When the response was submitted"),
+  leadScore: z.number().nullable().optional().describe("AI Lead Score from 1-100"),
+  leadIntent: z.enum(["high", "warm", "low"]).nullable().optional().describe("Lead intent level"),
+  leadReason: z.string().nullable().optional().describe("AI explanation for lead score"),
+  leadScoredAt: z.string().nullable().optional().describe("When the lead was scored"),
   answers: z.array(responseAnswerSchema).describe("Answers ordered by field order"),
 });
 

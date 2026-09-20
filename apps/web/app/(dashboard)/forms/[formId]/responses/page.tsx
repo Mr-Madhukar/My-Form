@@ -3,7 +3,20 @@
 import { use, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { formatDistanceToNow, format } from "date-fns";
-import { Inbox, ArrowLeft, Sparkles, Clock, Hash, Loader2, Download, ChevronLeft, ChevronRight, FileText, ExternalLink } from "lucide-react";
+import {
+  Inbox,
+  ArrowLeft,
+  Sparkles,
+  Clock,
+  Hash,
+  Loader2,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  ExternalLink,
+} from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "~/trpc/client";
 import { cn } from "~/lib/utils";
 import { FormTabs } from "../_components/form-tabs";
@@ -154,6 +167,10 @@ interface ResponseAnswer {
 interface ResponseItem {
   readonly id: string;
   readonly completedAt: string | Date | null;
+  readonly leadScore?: number | null;
+  readonly leadIntent?: "high" | "warm" | "low" | null;
+  readonly leadReason?: string | null;
+  readonly leadScoredAt?: string | null;
   readonly answers: readonly ResponseAnswer[];
 }
 
@@ -188,6 +205,52 @@ function matchResponseQuery(response: ResponseItem, query: string): boolean {
   return matchTime || matchAnswers;
 }
 
+type IntentFilter = "all" | "high" | "warm" | "low";
+type SortBy = "newest" | "score";
+type LeadIntent = "high" | "warm" | "low";
+
+function getLeadIntentEmoji(intent?: LeadIntent | null): string {
+  if (intent === "high") return "🔥";
+  if (intent === "warm") return "⚡";
+  return "💤";
+}
+
+function getLeadIntentLabel(intent?: LeadIntent | null): string {
+  if (intent === "high") return "🔥 High Intent";
+  if (intent === "warm") return "⚡ Warm Lead";
+  return "💤 Low Intent";
+}
+
+function getLeadIntentBadgeClass(intent?: LeadIntent | null): string {
+  if (intent === "high") {
+    return "bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_8px_rgba(249,115,22,0.15)]";
+  }
+  if (intent === "warm") {
+    return "bg-yellow-500/15 text-yellow-400 border-yellow-500/25";
+  }
+  return "bg-zinc-800 text-zinc-400 border-zinc-700";
+}
+
+function getLeadIntentScoreBoxClass(intent?: LeadIntent | null): string {
+  if (intent === "high") {
+    return "border-orange-500/30 bg-orange-500/20 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.2)]";
+  }
+  if (intent === "warm") {
+    return "border-yellow-500/25 bg-yellow-500/15 text-yellow-400";
+  }
+  return "border-zinc-700 bg-zinc-800 text-zinc-400";
+}
+
+function getLeadIntentPillClass(intent?: LeadIntent | null): string {
+  if (intent === "high") {
+    return "border border-orange-500/30 bg-orange-500/20 text-orange-400";
+  }
+  if (intent === "warm") {
+    return "border border-yellow-500/30 bg-yellow-500/20 text-yellow-400";
+  }
+  return "border border-zinc-700 bg-zinc-800 text-zinc-400";
+}
+
 interface ResponsesMasterListProps {
   readonly responses: readonly ResponseItem[];
   readonly filteredResponses: readonly ResponseItem[];
@@ -198,6 +261,13 @@ interface ResponsesMasterListProps {
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onFetchNextPage: () => void;
+  readonly intentFilter: IntentFilter;
+  readonly onIntentFilterChange: (filter: IntentFilter) => void;
+  readonly sortBy: SortBy;
+  readonly onSortByChange: (sort: SortBy) => void;
+  readonly highCount: number;
+  readonly warmCount: number;
+  readonly lowCount: number;
 }
 
 function ResponsesMasterList({
@@ -210,12 +280,19 @@ function ResponsesMasterList({
   hasNextPage,
   isFetchingNextPage,
   onFetchNextPage,
+  intentFilter,
+  onIntentFilterChange,
+  sortBy,
+  onSortByChange,
+  highCount,
+  warmCount,
+  lowCount,
 }: Readonly<ResponsesMasterListProps>) {
   return (
     <div
       className={cn(
         "shrink-0 overflow-y-auto border-white/7 p-3 flex flex-col gap-3",
-        "lg:w-75 lg:border-r",
+        "lg:w-80 lg:border-r",
         selectedId ? "hidden lg:flex" : "flex w-full",
       )}
     >
@@ -236,6 +313,73 @@ function ResponsesMasterList({
             ×
           </button>
         )}
+      </div>
+
+      {/* Intent Filter Pills */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none text-[10px]">
+        <button
+          type="button"
+          onClick={() => onIntentFilterChange("all")}
+          className={cn(
+            "rounded-lg px-2 py-1 font-medium transition-colors shrink-0 cursor-pointer",
+            intentFilter === "all"
+              ? "bg-white/10 text-white"
+              : "text-zinc-500 hover:text-zinc-300",
+          )}
+        >
+          All ({responses.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => onIntentFilterChange("high")}
+          className={cn(
+            "flex items-center gap-1 rounded-lg px-2 py-1 font-medium transition-colors shrink-0 cursor-pointer",
+            intentFilter === "high"
+              ? "bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/40"
+              : "text-orange-400/70 hover:text-orange-300",
+          )}
+        >
+          🔥 High ({highCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => onIntentFilterChange("warm")}
+          className={cn(
+            "flex items-center gap-1 rounded-lg px-2 py-1 font-medium transition-colors shrink-0 cursor-pointer",
+            intentFilter === "warm"
+              ? "bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/40"
+              : "text-yellow-400/70 hover:text-yellow-300",
+          )}
+        >
+          ⚡ Warm ({warmCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => onIntentFilterChange("low")}
+          className={cn(
+            "flex items-center gap-1 rounded-lg px-2 py-1 font-medium transition-colors shrink-0 cursor-pointer",
+            intentFilter === "low"
+              ? "bg-zinc-800 text-zinc-300 ring-1 ring-zinc-700"
+              : "text-zinc-500 hover:text-zinc-300",
+          )}
+        >
+          💤 Low ({lowCount})
+        </button>
+      </div>
+
+      {/* Sort row */}
+      <div className="flex items-center justify-between px-1 text-[10px] text-zinc-500">
+        <span>{filteredResponses.length} lead{filteredResponses.length === 1 ? "" : "s"}</span>
+        <button
+          type="button"
+          onClick={() => onSortByChange(sortBy === "newest" ? "score" : "newest")}
+          className="flex items-center gap-1 hover:text-zinc-300 transition-colors cursor-pointer"
+        >
+          <span>Sort:</span>
+          <span className="font-semibold text-zinc-400">
+            {sortBy === "newest" ? "Newest" : "🔥 Highest Score"}
+          </span>
+        </button>
       </div>
 
       {/* Scrollable list */}
@@ -262,17 +406,30 @@ function ResponsesMasterList({
                   isSelected ? "bg-white/6 ring-1 ring-white/10" : "hover:bg-white/3",
                 )}
               >
-                {/* Index + timestamp row */}
+                {/* Index + Lead Score + Timestamp row */}
                 <div className="mb-2 flex items-center justify-between">
-                  <div
-                    className={cn(
-                      "flex items-center justify-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold transition-colors duration-200",
-                      isSelected
-                        ? "bg-[#E8854A]/20 text-[#E8854A]"
-                        : "bg-white/5 text-[#4A4A4A] group-hover:text-[#6B6B6B]",
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className={cn(
+                        "flex items-center justify-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold transition-colors duration-200",
+                        isSelected
+                          ? "bg-[#E8854A]/20 text-[#E8854A]"
+                          : "bg-white/5 text-[#4A4A4A] group-hover:text-[#6B6B6B]",
+                      )}
+                    >
+                      #{idx}
+                    </div>
+
+                    {response.leadScore !== undefined && response.leadScore !== null && (
+                      <span
+                        className={cn(
+                          "flex items-center gap-0.5 rounded px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-tight border",
+                          getLeadIntentBadgeClass(response.leadIntent),
+                        )}
+                      >
+                        {getLeadIntentEmoji(response.leadIntent)} {response.leadScore}
+                      </span>
                     )}
-                  >
-                    #{idx}
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="size-2.5 text-[#4A4A4A]" />
@@ -344,6 +501,106 @@ interface ResponseDetailViewProps {
   readonly onPrev: () => void;
   readonly onNext: () => void;
   readonly onBackToList: () => void;
+  readonly onScoreSingle: (responseId: string) => void;
+  readonly scoringId: string | null;
+}
+
+function LeadIntelligenceCard({
+  selected,
+  onScoreSingle,
+  scoringId,
+}: {
+  readonly selected: ResponseItem;
+  readonly onScoreSingle: (responseId: string) => void;
+  readonly scoringId: string | null;
+}) {
+  const isScored = selected.leadScore !== undefined && selected.leadScore !== null;
+  if (!isScored) {
+    return (
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-dashed border-white/10 bg-white/2 p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-400">
+            <Sparkles className="size-4" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-zinc-300">AI Lead Scoring available</p>
+            <p className="text-[11px] text-zinc-500">
+              Evaluate buying intent, budget, and priority for this submission.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onScoreSingle(selected.id)}
+          disabled={scoringId === selected.id}
+          className="flex items-center gap-1.5 rounded-xl bg-[#E8854A] px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-[#E8854A]/90 disabled:opacity-50 cursor-pointer"
+        >
+          {scoringId === selected.id ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <Sparkles className="size-3" />
+          )}
+          <span>Score with AI</span>
+        </button>
+      </div>
+    );
+  }
+
+  const isHighIntent = selected.leadIntent === "high";
+
+  return (
+    <div className="relative mb-6 overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/4 via-white/2 to-transparent p-5 backdrop-blur-xl">
+      {isHighIntent && (
+        <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-orange-500/15 blur-3xl" />
+      )}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div
+            className={cn(
+              "flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl font-mono border shadow-sm",
+              getLeadIntentScoreBoxClass(selected.leadIntent),
+            )}
+          >
+            <span className="text-lg font-bold leading-none">{selected.leadScore}</span>
+            <span className="text-[9px] font-normal opacity-70 mt-0.5">/ 100</span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                AI Lead Score
+              </span>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider",
+                  getLeadIntentPillClass(selected.leadIntent),
+                )}
+              >
+                {getLeadIntentLabel(selected.leadIntent)}
+              </span>
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-zinc-200">
+              {selected.leadReason}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onScoreSingle(selected.id)}
+          disabled={scoringId === selected.id}
+          className="flex shrink-0 items-center gap-1.5 self-start sm:self-center rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 cursor-pointer"
+          title="Re-run AI evaluation for this response"
+        >
+          {scoringId === selected.id ? (
+            <Loader2 className="size-3 animate-spin text-orange-400" />
+          ) : (
+            <Sparkles className="size-3 text-orange-400" />
+          )}
+          <span>Re-evaluate</span>
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function ResponseDetailView({
@@ -357,6 +614,8 @@ function ResponseDetailView({
   onPrev,
   onNext,
   onBackToList,
+  onScoreSingle,
+  scoringId,
 }: Readonly<ResponseDetailViewProps>) {
   return (
     <div
@@ -422,6 +681,13 @@ function ResponseDetailView({
             </div>
           </div>
 
+          {/* AI Lead Intelligence Card */}
+          <LeadIntelligenceCard
+            selected={selected}
+            onScoreSingle={onScoreSingle}
+            scoringId={scoringId}
+          />
+
           {/* Answer cards */}
           <div className="space-y-3">
             {columns.map((col, idx) => {
@@ -486,9 +752,16 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
     { formId },
     { getNextPageParam: (last) => last.nextCursor },
   );
+  const leadScoringQuery = trpc.forms.getLeadScoring.useQuery({ formId });
+  const toggleLeadScoringMutation = trpc.forms.toggleLeadScoring.useMutation();
+  const scoreSingleMutation = trpc.forms.responses.scoreSingleResponse.useMutation();
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [intentFilter, setIntentFilter] = useState<IntentFilter>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("newest");
+  const [scoringId, setScoringId] = useState<string | null>(null);
 
   const exportCsv = trpc.forms.responses.exportCsv.useQuery(
     { formId },
@@ -513,14 +786,67 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
     }
   }, [exportCsv]);
 
+  const handleToggleLeadScoring = async () => {
+    const next = !leadScoringQuery.data?.enabled;
+    try {
+      await toggleLeadScoringMutation.mutateAsync({ formId, enabled: next });
+      await leadScoringQuery.refetch();
+      toast.success(
+        next
+          ? "AI Lead Scoring enabled! New submissions will be scored automatically."
+          : "AI Lead Scoring disabled for this form.",
+      );
+    } catch {
+      toast.error("Failed to update AI Lead Scoring setting");
+    }
+  };
+
+  const handleScoreSingle = async (responseId: string) => {
+    setScoringId(responseId);
+    try {
+      const res = await scoreSingleMutation.mutateAsync({ formId, responseId });
+      if (res.success) {
+        await q.refetch();
+        toast.success(`Scored as ${res.intent?.toUpperCase()} intent (${res.score}/100) 🔥`);
+      } else {
+        toast.error("Could not score this lead. Please try again.");
+      }
+    } catch {
+      toast.error("Lead scoring failed");
+    } finally {
+      setScoringId(null);
+    }
+  };
+
   const responses = useMemo(() => q.data?.pages.flatMap((p) => p.items) ?? [], [q.data]);
   const count = q.data?.pages[0]?.total ?? 0;
 
+  const { highCount, warmCount, lowCount } = useMemo(() => {
+    let high = 0;
+    let warm = 0;
+    let low = 0;
+    for (const r of responses) {
+      if (r.leadIntent === "high") high++;
+      else if (r.leadIntent === "warm") warm++;
+      else if (r.leadIntent === "low") low++;
+    }
+    return { highCount: high, warmCount: warm, lowCount: low };
+  }, [responses]);
+
   const filteredResponses = useMemo(() => {
-    if (!searchQuery.trim()) return responses;
-    const query = searchQuery.toLowerCase();
-    return responses.filter((r) => matchResponseQuery(r, query));
-  }, [responses, searchQuery]);
+    let list = responses;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      list = list.filter((r) => matchResponseQuery(r, query));
+    }
+    if (intentFilter !== "all") {
+      list = list.filter((r) => r.leadIntent === intentFilter);
+    }
+    if (sortBy === "score") {
+      list = [...list].sort((a, b) => (b.leadScore ?? 0) - (a.leadScore ?? 0));
+    }
+    return list;
+  }, [responses, searchQuery, intentFilter, sortBy]);
 
   const columns = useMemo(() => extractDistinctColumns(responses), [responses]);
 
@@ -560,6 +886,13 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
           hasNextPage={Boolean(q.hasNextPage)}
           isFetchingNextPage={q.isFetchingNextPage}
           onFetchNextPage={() => void q.fetchNextPage()}
+          intentFilter={intentFilter}
+          onIntentFilterChange={setIntentFilter}
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+          highCount={highCount}
+          warmCount={warmCount}
+          lowCount={lowCount}
         />
         <ResponseDetailView
           selected={selected}
@@ -572,10 +905,14 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
           onPrev={handlePrev}
           onNext={handleNext}
           onBackToList={() => setSelectedId(null)}
+          onScoreSingle={handleScoreSingle}
+          scoringId={scoringId}
         />
       </>
     );
   }
+
+  const isScoringEnabled = leadScoringQuery.data?.enabled ?? false;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#080808] text-[#F2F2F2]">
@@ -597,27 +934,78 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
             </span>
           )}
         </div>
-        {responses.length > 0 && (
+
+        <div className="flex items-center gap-2">
+          {/* AI Lead Scoring Toggle Button */}
           <button
             type="button"
-            onClick={handleExport}
-            disabled={exporting}
+            onClick={handleToggleLeadScoring}
+            disabled={toggleLeadScoringMutation.isPending}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
-              "bg-[#E8854A]/10 text-[#E8854A] ring-1 ring-[#E8854A]/20",
-              "transition-all duration-200 hover:bg-[#E8854A]/20",
-              "disabled:opacity-50 disabled:pointer-events-none",
+              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer",
+              isScoringEnabled
+                ? "bg-orange-500/15 text-orange-400 ring-1 ring-orange-500/30 hover:bg-orange-500/25"
+                : "bg-white/5 text-zinc-400 ring-1 ring-white/10 hover:bg-white/10 hover:text-white",
+              toggleLeadScoringMutation.isPending && "opacity-50 pointer-events-none",
+            )}
+            title="Toggle AI Lead Scoring for this form"
+          >
+            <Sparkles className={cn("size-3", isScoringEnabled ? "text-orange-400 fill-orange-400/20" : "")} />
+            <span>AI Scoring</span>
+            <span
+              className={cn(
+                "ml-0.5 inline-block h-1.5 w-1.5 rounded-full",
+                isScoringEnabled ? "bg-orange-400 animate-pulse" : "bg-zinc-600",
+              )}
+            />
+          </button>
+
+          {responses.length > 0 && (
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
+                "bg-[#E8854A]/10 text-[#E8854A] ring-1 ring-[#E8854A]/20",
+                "transition-all duration-200 hover:bg-[#E8854A]/20",
+                "disabled:opacity-50 disabled:pointer-events-none cursor-pointer",
+              )}
+            >
+              {exporting ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Download className="size-3" />
+              )}
+              Export CSV
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* High-Intent Alert Banner */}
+      {highCount > 0 && (
+        <div className="shrink-0 border-b border-orange-500/20 bg-linear-to-r from-orange-500/15 via-orange-500/5 to-transparent px-6 py-2.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-6 items-center justify-center rounded-lg bg-orange-500/20 text-xs">🔥</span>
+            <span className="text-xs text-orange-200">
+              <strong className="text-orange-400 font-semibold">{highCount} High-Intent Lead{highCount > 1 ? "s" : ""}</strong> identified by AI requiring priority action
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIntentFilter(intentFilter === "high" ? "all" : "high")}
+            className={cn(
+              "rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer",
+              intentFilter === "high"
+                ? "bg-orange-500 text-black shadow-sm"
+                : "bg-orange-500/20 text-orange-300 hover:bg-orange-500/30",
             )}
           >
-            {exporting ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <Download className="size-3" />
-            )}
-            Export CSV
+            {intentFilter === "high" ? "Showing High Intent ✓" : "Filter High Intent →"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex flex-1 overflow-hidden">

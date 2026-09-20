@@ -1,6 +1,5 @@
-import { eq, desc, isNull, and } from "@repo/database";
+import db, { eq, desc, isNull, and } from "@repo/database";
 import { formsTable, formVersionsTable } from "@repo/database/schema";
-import db from "@repo/database";
 import { nanoid } from "nanoid";
 import { withCache, invalidateKeys, CacheKeys } from "@repo/services/redis";
 import { z } from "../../schema";
@@ -218,3 +217,45 @@ export const disconnectGoogleSheets = formProcedure
     return { success: true };
   });
 
+export const getLeadScoring = formProcedure
+  .meta({ openapi: { method: "GET", path: "/forms/{formId}/lead-scoring", tags: TAGS } })
+  .input(z.object({ formId: z.string() }))
+  .output(z.object({ enabled: z.boolean() }))
+  .query(async ({ ctx }) => {
+    const [version] = await db
+      .select({ settings: formVersionsTable.settings })
+      .from(formVersionsTable)
+      .where(eq(formVersionsTable.formId, ctx.form.id))
+      .orderBy(desc(formVersionsTable.versionNumber))
+      .limit(1);
+
+    const settings = (version?.settings ?? {}) as Record<string, unknown>;
+    return { enabled: Boolean(settings.aiLeadScoringEnabled) };
+  });
+
+export const toggleLeadScoring = formProcedure
+  .meta({ openapi: { method: "POST", path: "/forms/{formId}/lead-scoring/toggle", tags: TAGS } })
+  .input(z.object({ formId: z.string(), enabled: z.boolean() }))
+  .output(z.object({ success: z.boolean(), enabled: z.boolean() }))
+  .mutation(async ({ ctx, input }) => {
+    const versions = await db
+      .select({ id: formVersionsTable.id, settings: formVersionsTable.settings })
+      .from(formVersionsTable)
+      .where(eq(formVersionsTable.formId, ctx.form.id));
+
+    for (const v of versions) {
+      const current = (v.settings ?? {}) as Record<string, unknown>;
+      await db
+        .update(formVersionsTable)
+        .set({
+          settings: {
+            ...current,
+            aiLeadScoringEnabled: input.enabled,
+          },
+        })
+        .where(eq(formVersionsTable.id, v.id));
+    }
+
+    await invalidateKeys(CacheKeys.formSlug(ctx.form.publicSlug));
+    return { success: true, enabled: input.enabled };
+  });

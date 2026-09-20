@@ -15,6 +15,8 @@ export const formsRouter = router({
   setResponseLimit: crud.setResponseLimit,
   connectGoogleSheets: crud.connectGoogleSheets,
   disconnectGoogleSheets: crud.disconnectGoogleSheets,
+  getLeadScoring: crud.getLeadScoring,
+  toggleLeadScoring: crud.toggleLeadScoring,
   versions: formsVersionsRouter,
   public: formsPublicRouter,
   responses: formsResponsesRouter,

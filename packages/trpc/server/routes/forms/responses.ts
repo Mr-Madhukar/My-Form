@@ -7,11 +7,94 @@ import {
   aiFollowupsTable,
 } from "@repo/database/schema";
 import { withCache, CacheKeys } from "@repo/services/redis";
+import { scoreLeadResponse } from "@repo/services/lead-scoring";
 import { router, formProcedure } from "../../trpc";
 import { responseListPageSchema, summaryDataSchema } from "./model";
 import { z } from "../../schema";
 
 const TAGS = ["Form Responses"];
+
+function csvEscape(val: unknown): string {
+  if (val === null || val === undefined) return "";
+  let str: string;
+  if (typeof val === "string") {
+    str = val;
+  } else if (typeof val === "number" || typeof val === "boolean") {
+    str = String(val);
+  } else if (Array.isArray(val)) {
+    str = val
+      .map((item) =>
+        typeof item === "object" && item !== null ? JSON.stringify(item) : String(item),
+      )
+      .join(", ");
+  } else if (typeof val === "object") {
+    str = JSON.stringify(val);
+  } else {
+    str = "";
+  }
+
+  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+    return `"${str.replaceAll('"', '""')}"`;
+  }
+  return str;
+}
+
+function computeChoiceSummary(values: unknown[]): string {
+  const counts: Record<string, number> = {};
+  for (const v of values) {
+    const s = String(v);
+    counts[s] = (counts[s] ?? 0) + 1;
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([opt, c]) => `${opt}: ${c}/${values.length}`)
+    .join(", ");
+}
+
+function computeMultipleChoiceSummary(values: unknown[]): string {
+  const counts: Record<string, number> = {};
+  for (const v of values) {
+    const arr = Array.isArray(v) ? v : [v];
+    for (const item of arr) {
+      const s = String(item);
+      counts[s] = (counts[s] ?? 0) + 1;
+    }
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([opt, c]) => `${opt}: ${c}/${values.length}`)
+    .join(", ");
+}
+
+function computeNumericSummary(values: unknown[]): string {
+  const nums = values.map(Number).filter((v) => !Number.isNaN(v));
+  if (nums.length === 0) {
+    return "No numeric responses";
+  }
+  const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+  return `avg ${avg.toFixed(1)}, range ${Math.min(...nums)}–${Math.max(...nums)} (${nums.length} responses)`;
+}
+
+function computeTextSummary(values: unknown[]): string {
+  const strs = values
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 15);
+  return strs.map((s) => `"${s}"`).join("\n");
+}
+
+function computeFieldSummary(type: string, values: unknown[]): string {
+  if (type === "single_choice") {
+    return computeChoiceSummary(values);
+  }
+  if (type === "multiple_choice") {
+    return computeMultipleChoiceSummary(values);
+  }
+  if (type === "rating" || type === "number") {
+    return computeNumericSummary(values);
+  }
+  return computeTextSummary(values);
+}
 
 export const formsResponsesRouter = router({
   summaryData: formProcedure
@@ -77,51 +160,11 @@ export const formsResponsesRouter = router({
 
         const fields = [...fieldMap.values()]
           .sort((a, b) => a.order - b.order)
-          .map(({ label, type, values }) => {
-            const n = values.length;
-            let summary: string;
-
-            if (type === "single_choice") {
-              const counts: Record<string, number> = {};
-              for (const v of values) {
-                const s = String(v);
-                counts[s] = (counts[s] ?? 0) + 1;
-              }
-              summary = Object.entries(counts)
-                .sort((a, b) => b[1] - a[1])
-                .map(([opt, c]) => `${opt}: ${c}/${n}`)
-                .join(", ");
-            } else if (type === "multiple_choice") {
-              const counts: Record<string, number> = {};
-              for (const v of values) {
-                const arr = Array.isArray(v) ? v : [v];
-                for (const item of arr) {
-                  const s = String(item);
-                  counts[s] = (counts[s] ?? 0) + 1;
-                }
-              }
-              summary = Object.entries(counts)
-                .sort((a, b) => b[1] - a[1])
-                .map(([opt, c]) => `${opt}: ${c}/${n}`)
-                .join(", ");
-            } else if (type === "rating" || type === "number") {
-              const nums = values.map((v) => Number(v)).filter((v) => !isNaN(v));
-              if (nums.length === 0) {
-                summary = "No numeric responses";
-              } else {
-                const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
-                summary = `avg ${avg.toFixed(1)}, range ${Math.min(...nums)}–${Math.max(...nums)} (${nums.length} responses)`;
-              }
-            } else {
-              const strs = values
-                .map((v) => String(v))
-                .filter(Boolean)
-                .slice(0, 15);
-              summary = strs.map((s) => `"${s}"`).join("\n");
-            }
-
-            return { label, type, summary };
-          });
+          .map(({ label, type, values }) => ({
+            label,
+            type,
+            summary: computeFieldSummary(type, values),
+          }));
 
         return { formTitle, responseCount: responses.length, fields };
       });
@@ -161,7 +204,11 @@ export const formsResponsesRouter = router({
         const total = totalRow?.value ?? 0;
 
         const responses = await db
-          .select({ id: responsesTable.id, completedAt: responsesTable.completedAt })
+          .select({
+            id: responsesTable.id,
+            completedAt: responsesTable.completedAt,
+            metadata: responsesTable.metadata,
+          })
           .from(responsesTable)
           .where(
             and(
@@ -231,11 +278,26 @@ export const formsResponsesRouter = router({
           byResponse.set(a.responseId, list);
         }
 
-        const items = responses.map((r) => ({
-          id: r.id,
-          completedAt: r.completedAt,
-          answers: byResponse.get(r.id) ?? [],
-        }));
+        const items = responses.map((r) => {
+          const meta = (r.metadata ?? {}) as Record<string, unknown>;
+          const leadScore = typeof meta.leadScore === "number" ? meta.leadScore : null;
+          const leadIntent: "high" | "warm" | "low" | null =
+            meta.leadIntent === "high" || meta.leadIntent === "warm" || meta.leadIntent === "low"
+              ? (meta.leadIntent as "high" | "warm" | "low")
+              : null;
+          const leadReason = typeof meta.leadReason === "string" ? meta.leadReason : null;
+          const leadScoredAt = typeof meta.leadScoredAt === "string" ? meta.leadScoredAt : null;
+
+          return {
+            id: r.id,
+            completedAt: r.completedAt,
+            leadScore,
+            leadIntent,
+            leadReason,
+            leadScoredAt,
+            answers: byResponse.get(r.id) ?? [],
+          };
+        });
 
         return {
           items,
@@ -269,6 +331,7 @@ export const formsResponsesRouter = router({
         .select({
           id: responsesTable.id,
           completedAt: responsesTable.completedAt,
+          metadata: responsesTable.metadata,
         })
         .from(responsesTable)
         .where(
@@ -316,23 +379,26 @@ export const formsResponsesRouter = router({
         responseMap.set(a.fieldId, a.value);
       }
 
-      // CSV escape helper
-      function csvEscape(val: unknown): string {
-        if (val === null || val === undefined) return "";
-        const str = Array.isArray(val) ? val.join(", ") : String(val);
-        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-          return `"${str.replace(/"/g, '""')}"`;
-        }
-        return str;
-      }
-
       // Build CSV
-      const header = ["#", "Submitted At", ...columns.map((c) => csvEscape(c[1].label))].join(",");
+      const header = [
+        "#",
+        "Submitted At",
+        "Lead Score",
+        "Lead Intent",
+        "Lead Reason",
+        ...columns.map((c) => csvEscape(c[1].label)),
+      ].join(",");
       const rows = responses.map((r, i) => {
         const responseAnswers = answerIndex.get(r.id);
+        const meta = (r.metadata ?? {}) as Record<string, unknown>;
+        const scoreStr = typeof meta.leadScore === "number" ? String(meta.leadScore) : "";
+        const intentStr = typeof meta.leadIntent === "string" ? meta.leadIntent : "";
         const cells = [
           String(i + 1),
           r.completedAt ? new Date(r.completedAt).toISOString() : "",
+          scoreStr,
+          intentStr,
+          csvEscape(meta.leadReason ?? ""),
           ...columns.map((c) => csvEscape(responseAnswers?.get(c[0]))),
         ];
         return cells.join(",");
@@ -341,5 +407,42 @@ export const formsResponsesRouter = router({
       const csv = [header, ...rows].join("\n");
       const safeName = formTitle.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
       return { csv, filename: `${safeName}-responses.csv` };
+    }),
+
+  scoreSingleResponse: formProcedure
+    .meta({ openapi: { method: "POST", path: "/forms/{formId}/responses/{responseId}/score", tags: TAGS } })
+    .input(z.object({ formId: z.string(), responseId: z.string() }))
+    .output(
+      z.object({
+        success: z.boolean(),
+        score: z.number().nullable(),
+        intent: z.enum(["high", "warm", "low"]).nullable(),
+        reason: z.string().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [version] = await db
+        .select({ title: formVersionsTable.title })
+        .from(formVersionsTable)
+        .where(eq(formVersionsTable.formId, ctx.form.id))
+        .orderBy(desc(formVersionsTable.versionNumber))
+        .limit(1);
+
+      const result = await scoreLeadResponse(
+        ctx.form.id,
+        input.responseId,
+        version?.title || "Form",
+      );
+
+      if (!result) {
+        return { success: false, score: null, intent: null, reason: null };
+      }
+
+      return {
+        success: true,
+        score: result.score,
+        intent: result.intent,
+        reason: result.reason,
+      };
     }),
 });
