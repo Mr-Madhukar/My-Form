@@ -2,17 +2,15 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { LayoutGrid, Plus, FileText } from "lucide-react";
+import { LayoutGrid, FileText } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { themeToCSSVars } from "~/lib/theme";
 import { useFormEditorStore } from "~/stores/form-editor";
 import { FieldCard } from "./field-card";
 import { getPageCount } from "@repo/forms";
 
-const EASE = "transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]";
-
 export function FieldCanvas() {
-  const { fields, theme, updateField } = useFormEditorStore();
+  const { fields, theme } = useFormEditorStore();
   const cssVars = themeToCSSVars(theme);
 
   const { setNodeRef, isOver } = useDroppable({ id: "canvas" });
@@ -29,17 +27,6 @@ export function FieldCanvas() {
       }),
     });
   }
-
-  const addPage = () => {
-    // No-op if no fields yet
-    if (fields.length === 0) return;
-    // Assign all fields currently on the last page to a new page?
-    // Actually, adding a page means the NEXT field added should go to this page.
-    // For now, just bump pageCount by adding a dummy indicator.
-    // We'll do this by updating the last field to be on pageCount
-    // Actually, just mark the last field as being on the current last page.
-    // This is a visual feature primarily.
-  };
 
   return (
     <div
@@ -90,12 +77,12 @@ export function FieldCanvas() {
                   {/* Page divider (shown for pages > 0) */}
                   {group.page > 0 && (
                     <div className="my-4 flex items-center gap-3">
-                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#7C3AED]/30 to-transparent" />
+                      <div className="h-px flex-1 bg-linear-to-r from-transparent via-[#7C3AED]/30 to-transparent" />
                       <span className="flex items-center gap-1.5 rounded-full bg-[#7C3AED]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#7C3AED]">
                         <FileText className="size-3" />
                         Page {group.page + 1}
                       </span>
-                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#7C3AED]/30 to-transparent" />
+                      <div className="h-px flex-1 bg-linear-to-r from-transparent via-[#7C3AED]/30 to-transparent" />
                     </div>
                   )}
                   {group.fields.map((field, i) => (

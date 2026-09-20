@@ -17,13 +17,8 @@ import {
   FileText,
   Sparkles,
   Eye,
-  ArrowLeft,
   Star,
-  CheckCircle2,
-  Calendar,
   Layers2,
-  HelpCircle,
-  Hash,
   Gamepad2,
   Users,
   Briefcase,
@@ -37,8 +32,7 @@ import { cn } from "~/lib/utils";
 import { useAuthStore } from "~/stores/auth";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
-import { motion, AnimatePresence } from "motion/react";
-import { STATIC_TEMPLATES, type FormTemplate, type TemplateField } from "./_templates/data";
+import { STATIC_TEMPLATES, type FormTemplate } from "./_templates/data";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +40,6 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 
-const ACCENT = "#E8854A";
 const EASE = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
 const SPANS = [
@@ -68,13 +61,13 @@ type ExploreForm = {
   publishedAt: Date | string | null;
 };
 
-function ExploreCard({ form, index }: { form: ExploreForm; index: number }) {
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  }
+function handleSpotlightMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+}
 
+function ExploreCard({ form, index }: { readonly form: ExploreForm; readonly index: number }) {
   return (
     <div
       style={{ animationDelay: `${index * 70}ms` }}
@@ -85,7 +78,7 @@ function ExploreCard({ form, index }: { form: ExploreForm; index: number }) {
         `transition-all duration-500 ${EASE}`,
         "hover:ring-white/12",
       )}
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleSpotlightMouseMove}
     >
       {/* Spotlight */}
       <div
@@ -161,15 +154,14 @@ function ExploreCard({ form, index }: { form: ExploreForm; index: number }) {
 
 function hexToRgba(hex: string, alpha: number): string {
   const clean = hex.replace("#", "");
-  const r = parseInt(clean.substring(0, 2), 16);
-  const g = parseInt(clean.substring(2, 4), 16);
-  const b = parseInt(clean.substring(4, 6), 16);
+  const r = Number.parseInt(clean.substring(0, 2), 16);
+  const g = Number.parseInt(clean.substring(2, 4), 16);
+  const b = Number.parseInt(clean.substring(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function TemplateVisualPreview({ template }: { template: FormTemplate }) {
+function TemplateVisualPreview({ template }: { readonly template: FormTemplate }) {
   const accent = template.theme.accentColor;
-  const glow = hexToRgba(accent, 0.2);
 
   // Custom graphics based on category to make them feel highly customized:
   let previewGraphic = null;
@@ -216,7 +208,7 @@ function TemplateVisualPreview({ template }: { template: FormTemplate }) {
   return (
     <div className="relative h-28 w-full overflow-hidden rounded-xl border border-white/5 bg-[#090909] mb-4 flex flex-col justify-end p-3">
       {/* Decorative grid background */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:10px_10px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-size-[10px_10px] mask-[radial-gradient(ellipse_at_center,black,transparent_75%)]" />
 
       {/* Accent glow in corner */}
       <div
@@ -269,19 +261,13 @@ function TemplateCard({
   onUse,
   usingTemplateSlug,
 }: {
-  template: FormTemplate;
-  idx: number;
-  onPreview: () => void;
-  onUse: () => void;
-  usingTemplateSlug: string | null;
+  readonly template: FormTemplate;
+  readonly idx: number;
+  readonly onPreview: () => void;
+  readonly onUse: () => void;
+  readonly usingTemplateSlug: string | null;
 }) {
   const [hovered, setHovered] = useState(false);
-
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  }
 
   const glowColor = hexToRgba(template.theme.accentColor, 0.12);
   const borderHoverColor = hexToRgba(template.theme.accentColor, 0.25);
@@ -296,9 +282,9 @@ function TemplateCard({
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleSpotlightMouseMove}
       className={cn(
-        "animate-fade-up group relative rounded-2xl border bg-white/[0.01] p-4.5 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] flex flex-col justify-between"
+        "animate-fade-up group relative rounded-2xl border bg-white/1 p-4.5 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] flex flex-col justify-between"
       )}
     >
       {/* Spotlight */}
@@ -366,23 +352,25 @@ function TemplateCard({
   );
 }
 
+type MockAnswer = string | number | string[];
+
 function TemplatePreviewDialogContent({
   template,
   usingTemplateSlug,
   onUse,
 }: {
-  template: FormTemplate;
-  usingTemplateSlug: string | null;
-  onUse: () => void;
+  readonly template: FormTemplate;
+  readonly usingTemplateSlug: string | null;
+  readonly onUse: () => void;
 }) {
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<Record<string, MockAnswer>>({});
   const [submitted, setSubmitted] = useState(false);
 
   const accentColor = template.theme.accentColor;
   const lightAccent = hexToRgba(accentColor, 0.15);
   const borderAccent = hexToRgba(accentColor, 0.3);
 
-  const handleInputChange = (fieldId: string, val: any) => {
+  const handleInputChange = (fieldId: string, val: MockAnswer) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: val }));
   };
 
@@ -426,13 +414,13 @@ function TemplatePreviewDialogContent({
       </div>
 
       {/* Body - split design */}
-      <div className="grid grid-cols-1 md:grid-cols-5 h-[480px]">
+      <div className="grid grid-cols-1 md:grid-cols-5 h-120">
         {/* Left column: Template stats & fields list */}
-        <div className="md:col-span-2 border-r border-white/6 p-6 overflow-y-auto bg-white/[0.01]">
+        <div className="md:col-span-2 border-r border-white/6 p-6 overflow-y-auto bg-white/1">
           <h4 className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#6B6B6B] mb-4">Structure ({template.fields.length} fields)</h4>
           <div className="space-y-2.5">
             {template.fields.map((field, idx) => (
-              <div key={field.id} className="flex items-start gap-2.5 p-2 rounded-xl bg-white/[0.02] border border-white/5">
+              <div key={field.id} className="flex items-start gap-2.5 p-2 rounded-xl bg-white/2 border border-white/5">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/5 font-mono text-[9px] text-[#4A4A4A] mt-0.5">
                   {idx + 1}
                 </span>
@@ -462,9 +450,9 @@ function TemplatePreviewDialogContent({
             )}
           </div>
 
-          <div className="flex-1 flex flex-col max-w-md mx-auto w-full p-0 rounded-2xl bg-[#0f0f0f] border border-white/[0.06] overflow-hidden justify-between min-h-[340px] shadow-2xl">
+          <div className="flex-1 flex flex-col max-w-md mx-auto w-full p-0 rounded-2xl bg-[#0f0f0f] border border-white/6 overflow-hidden justify-between min-h-85 shadow-2xl">
             {/* Mock Browser Header Bar */}
-            <div className="flex items-center justify-between bg-zinc-950 px-4 py-2 border-b border-white/[0.04] shrink-0">
+            <div className="flex items-center justify-between bg-zinc-950 px-4 py-2 border-b border-white/4 shrink-0">
               <div className="flex gap-1.5">
                 <div className="size-2 rounded-full bg-red-500/80" />
                 <div className="size-2 rounded-full bg-yellow-500/80" />
@@ -489,19 +477,22 @@ function TemplatePreviewDialogContent({
                     <h5 className="text-sm font-bold text-white">Response Submitted!</h5>
                     <p className="text-xs text-[#6B6B6B]">This is an interactive simulation of the public runner.</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-left">
+                  <div className="rounded-xl border border-white/5 bg-white/2 p-3 text-left">
                     <p className="font-mono text-[9px] uppercase tracking-wider text-zinc-500 mb-1.5">Summary of answers</p>
                     <div className="space-y-1 text-[10px] font-mono text-zinc-400 max-h-24 overflow-y-auto">
-                      {template.fields.slice(0, 3).map((f) => (
-                        <div key={f.id} className="truncate">
-                          <span className="text-zinc-600">{f.label.slice(0, 20)}...:</span>{" "}
-                          <span style={{ color: accentColor }}>
-                            {Array.isArray(answers[f.id])
-                              ? answers[f.id].join(", ")
-                              : String(answers[f.id] ?? "(skipped)")}
-                          </span>
-                        </div>
-                      ))}
+                      {template.fields.slice(0, 3).map((f) => {
+                        const ans = answers[f.id];
+                        return (
+                          <div key={f.id} className="truncate">
+                            <span className="text-zinc-600">{f.label.slice(0, 20)}...:</span>{" "}
+                            <span style={{ color: accentColor }}>
+                              {Array.isArray(ans)
+                                ? ans.join(", ")
+                                : String(ans ?? "(skipped)")}
+                            </span>
+                          </div>
+                        );
+                      })}
                       {template.fields.length > 3 && (
                         <div className="text-zinc-600 text-[9px]">+ {template.fields.length - 3} more fields</div>
                       )}
@@ -520,9 +511,9 @@ function TemplatePreviewDialogContent({
                       {field.type === "short_text" && (
                         <input
                           type="text"
-                          value={answers[field.id] ?? ""}
+                          value={(answers[field.id] as string) ?? ""}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
-                          placeholder={field.config.placeholder || "Your answer..."}
+                          placeholder={(field.config.placeholder as string) || "Your answer..."}
                           className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:ring-1 transition-all"
                           style={{
                             borderColor: answers[field.id] ? accentColor : "rgba(255,255,255,0.06)",
@@ -534,9 +525,9 @@ function TemplatePreviewDialogContent({
                       {field.type === "long_text" && (
                         <textarea
                           rows={2}
-                          value={answers[field.id] ?? ""}
+                          value={(answers[field.id] as string) ?? ""}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
-                          placeholder={field.config.placeholder || "Your answer..."}
+                          placeholder={(field.config.placeholder as string) || "Your answer..."}
                           className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-zinc-200 placeholder-zinc-700 resize-none focus:outline-none focus:ring-1 transition-all"
                           style={{
                             borderColor: answers[field.id] ? accentColor : "rgba(255,255,255,0.06)",
@@ -548,9 +539,9 @@ function TemplatePreviewDialogContent({
                       {field.type === "email" && (
                         <input
                           type="email"
-                          value={answers[field.id] ?? ""}
+                          value={(answers[field.id] as string) ?? ""}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
-                          placeholder={field.config.placeholder || "name@example.com"}
+                          placeholder={(field.config.placeholder as string) || "name@example.com"}
                           className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:ring-1 transition-all"
                           style={{
                             borderColor: answers[field.id] ? accentColor : "rgba(255,255,255,0.06)",
@@ -562,9 +553,9 @@ function TemplatePreviewDialogContent({
                       {field.type === "number" && (
                         <input
                           type="number"
-                          value={answers[field.id] ?? ""}
+                          value={(answers[field.id] as number) ?? ""}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
-                          placeholder={field.config.placeholder || "0"}
+                          placeholder={(field.config.placeholder as string) || "0"}
                           className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:ring-1 transition-all"
                           style={{
                             borderColor: answers[field.id] ? accentColor : "rgba(255,255,255,0.06)",
@@ -575,13 +566,14 @@ function TemplatePreviewDialogContent({
 
                       {field.type === "single_choice" && (
                         <div className="space-y-1.5">
-                          {field.config.options?.slice(0, 3).map((opt: any) => {
+                          {field.config.options?.slice(0, 3).map((opt: { id: string; label: string }) => {
                             const isSelected = answers[field.id] === opt.label;
                             return (
-                              <div
+                              <button
                                 key={opt.id}
+                                type="button"
                                 onClick={() => handleInputChange(field.id, opt.label)}
-                                className="flex items-center gap-2 p-2 rounded-lg bg-[#111] border cursor-pointer hover:bg-white/[0.02] transition-colors"
+                                className="flex w-full items-center gap-2 p-2 rounded-lg bg-[#111] border cursor-pointer hover:bg-white/2 transition-colors text-left"
                                 style={{ borderColor: isSelected ? borderAccent : "rgba(255,255,255,0.04)" }}
                               >
                                 <div
@@ -591,7 +583,7 @@ function TemplatePreviewDialogContent({
                                   {isSelected && <div className="size-1.5 rounded-full" style={{ backgroundColor: accentColor }} />}
                                 </div>
                                 <span className="text-[11px]" style={{ color: isSelected ? "#fff" : "rgba(255,255,255,0.6)" }}>{opt.label}</span>
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
@@ -599,8 +591,8 @@ function TemplatePreviewDialogContent({
 
                       {field.type === "multiple_choice" && (
                         <div className="space-y-1.5">
-                          {field.config.options?.slice(0, 3).map((opt: any) => {
-                            const selectedList = answers[field.id] || [];
+                          {field.config.options?.slice(0, 3).map((opt: { id: string; label: string }) => {
+                            const selectedList = (answers[field.id] as string[] | undefined) || [];
                             const isSelected = selectedList.includes(opt.label);
                             const handleCheck = () => {
                               const next = isSelected
@@ -609,10 +601,11 @@ function TemplatePreviewDialogContent({
                               handleInputChange(field.id, next);
                             };
                             return (
-                              <div
+                              <button
                                 key={opt.id}
+                                type="button"
                                 onClick={handleCheck}
-                                className="flex items-center gap-2 p-2 rounded-lg bg-[#111] border cursor-pointer hover:bg-white/[0.02] transition-colors"
+                                className="flex w-full items-center gap-2 p-2 rounded-lg bg-[#111] border cursor-pointer hover:bg-white/2 transition-colors text-left"
                                 style={{ borderColor: isSelected ? borderAccent : "rgba(255,255,255,0.04)" }}
                               >
                                 <div
@@ -625,7 +618,7 @@ function TemplatePreviewDialogContent({
                                   {isSelected && <Check className="size-2.5" style={{ color: accentColor }} />}
                                 </div>
                                 <span className="text-[11px]" style={{ color: isSelected ? "#fff" : "rgba(255,255,255,0.6)" }}>{opt.label}</span>
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
@@ -633,14 +626,15 @@ function TemplatePreviewDialogContent({
 
                       {field.type === "rating" && (
                         <div className="flex gap-1.5">
-                          {Array.from({ length: field.config.scale || 5 }).map((_, i) => {
+                          {Array.from({ length: (field.config.scale as number) || 5 }).map((_, i) => {
                             const val = i + 1;
                             const isSelected = answers[field.id] === val;
                             return (
-                              <div
-                                key={i}
+                              <button
+                                key={val}
+                                type="button"
                                 onClick={() => handleInputChange(field.id, val)}
-                                className="size-7 rounded-lg bg-[#111] border flex items-center justify-center text-[10px] font-semibold cursor-pointer hover:bg-white/[0.02] transition-all"
+                                className="size-7 rounded-lg bg-[#111] border flex items-center justify-center text-[10px] font-semibold cursor-pointer hover:bg-white/2 transition-all"
                                 style={{
                                   borderColor: isSelected ? accentColor : "rgba(255,255,255,0.04)",
                                   backgroundColor: isSelected ? lightAccent : "transparent",
@@ -656,7 +650,7 @@ function TemplatePreviewDialogContent({
                                     }}
                                   />
                                 ) : val}
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
@@ -665,7 +659,7 @@ function TemplatePreviewDialogContent({
                       {field.type === "date" && (
                         <input
                           type="date"
-                          value={answers[field.id] ?? ""}
+                          value={(answers[field.id] as string) ?? ""}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
                           className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:ring-1 transition-all"
                           style={{
@@ -701,7 +695,7 @@ function TemplatePreviewDialogContent({
   );
 }
 
-function CardSkeleton({ index }: { index: number }) {
+function CardSkeleton({ index }: { readonly index: number }) {
   return (
     <div
       className={cn(
@@ -835,6 +829,75 @@ export default function ExplorePage() {
 
   const categories = ["All", "Entertainment", "Gaming", "Product", "Social", "Hiring", "Education"];
 
+  let navAuthSection: React.ReactNode;
+  if (authLoading) {
+    navAuthSection = <div className="h-7 w-20 animate-pulse rounded-full bg-white/5" />;
+  } else if (user) {
+    navAuthSection = (
+      <Link
+        href="/forms"
+        className={cn(
+          "rounded-full px-3.5 py-1.5 text-xs font-medium",
+          "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20",
+          `transition-all duration-300 ${EASE}`,
+          "hover:bg-[#E8854A]/20",
+        )}
+      >
+        Dashboard
+      </Link>
+    );
+  } else {
+    navAuthSection = (
+      <>
+        <Link
+          href="/login"
+          className="rounded-full px-3 py-1.5 text-xs font-medium text-[#6B6B6B] transition-colors duration-300 hover:text-[#F2F2F2]"
+        >
+          Login
+        </Link>
+        <Link
+          href="/signup"
+          className={cn(
+            "rounded-full px-3.5 py-1.5 text-xs font-medium",
+            "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20",
+            `transition-all duration-300 ${EASE}`,
+            "hover:bg-[#E8854A]/20",
+          )}
+        >
+          Start free
+        </Link>
+      </>
+    );
+  }
+
+  let communityContent: React.ReactNode;
+  if (isCommunityLoading) {
+    communityContent = (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <CardSkeleton key={i} index={i} />
+        ))}
+      </div>
+    );
+  } else if (filteredCommunityForms.length === 0) {
+    communityContent = (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <FileText className="size-10 text-[#3A3A3A] mb-3" />
+        <p className="text-sm text-[#6B6B6B]">
+          {searchQuery ? "No community forms match your search." : "No community forms available yet."}
+        </p>
+      </div>
+    );
+  } else {
+    communityContent = (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+        {filteredCommunityForms.map((form, i) => (
+          <ExploreCard key={form.id} form={form} index={i} />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#080808] text-[#F2F2F2] selection:bg-[#E8854A]/30 selection:text-[#E8854A]">
       {/* Minimal top nav */}
@@ -850,6 +913,8 @@ export default function ExplorePage() {
                 className="object-contain logo-img"
               />
             </Link>
+
+            {/* Actions */}
             <div className="flex items-center gap-2">
               {mounted && (
                 <Button
@@ -862,41 +927,7 @@ export default function ExplorePage() {
                   {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
                 </Button>
               )}
-              {authLoading ? (
-                <div className="h-7 w-20 animate-pulse rounded-full bg-white/5" />
-              ) : user ? (
-                <Link
-                  href="/forms"
-                  className={cn(
-                    "rounded-full px-3.5 py-1.5 text-xs font-medium",
-                    "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20",
-                    `transition-all duration-300 ${EASE}`,
-                    "hover:bg-[#E8854A]/20",
-                  )}
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="rounded-full px-3 py-1.5 text-xs font-medium text-[#6B6B6B] transition-colors duration-300 hover:text-[#F2F2F2]"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/signup"
-                    className={cn(
-                      "rounded-full px-3.5 py-1.5 text-xs font-medium",
-                      "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20",
-                      `transition-all duration-300 ${EASE}`,
-                      "hover:bg-[#E8854A]/20",
-                    )}
-                  >
-                    Start free
-                  </Link>
-                </>
-              )}
+              {navAuthSection}
             </div>
           </div>
         </div>
@@ -921,7 +952,7 @@ export default function ExplorePage() {
         </div>
 
         {/* Tab switchers + search input */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/[0.06] pb-5">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/6 pb-5">
           <div className="flex gap-2 bg-white/2 p-1 rounded-full border border-white/6 w-fit">
             <button
               onClick={() => {
@@ -983,7 +1014,7 @@ export default function ExplorePage() {
                     "rounded-full px-3 py-1 text-[11px] font-mono tracking-wider transition-all duration-300 border",
                     selectedCategory === cat
                       ? "bg-[#E8854A]/10 text-[#E8854A] border-[#E8854A]/30 ring-1 ring-[#E8854A]/10"
-                      : "bg-white/[0.02] border-white/6 text-[#6B6B6B] hover:text-[#C4C4C4] hover:border-white/12"
+                      : "bg-white/2 border-white/6 text-[#6B6B6B] hover:text-[#C4C4C4] hover:border-white/12"
                   )}
                 >
                   {cat}
@@ -1017,26 +1048,7 @@ export default function ExplorePage() {
         {/* Community forms view */}
         {activeTab === "community" && (
           <div className="animate-fade-in">
-            {isCommunityLoading ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <CardSkeleton key={i} index={i} />
-                ))}
-              </div>
-            ) : filteredCommunityForms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <FileText className="size-10 text-[#3A3A3A] mb-3" />
-                <p className="text-sm text-[#6B6B6B]">
-                  {searchQuery ? "No community forms match your search." : "No community forms available yet."}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
-                {filteredCommunityForms.map((form, i) => (
-                  <ExploreCard key={form.id} form={form} index={i} />
-                ))}
-              </div>
-            )}
+            {communityContent}
           </div>
         )}
       </div>

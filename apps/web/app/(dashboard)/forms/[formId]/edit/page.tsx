@@ -93,7 +93,7 @@ export default function EditorPage({ params }: { params: Promise<{ formId: strin
       })),
       (d as { theme?: import("@repo/forms/theme").FormTheme | null }).theme,
     );
-  }, [draftQuery.data]);
+  }, [draftQuery.data, setForm]);
 
   if (draftQuery.isPending || formQuery.isPending) {
     return (
@@ -148,9 +148,9 @@ export default function EditorPage({ params }: { params: Promise<{ formId: strin
                   return (
                     <div
                       style={cssVars}
-                      className="flex w-49 items-center gap-2.5 rounded-full bg-[var(--form-surface-elevated)] px-2.5 py-2 opacity-90 shadow-lg shadow-black/50 ring-1 ring-[color-mix(in_srgb,var(--form-accent)_40%,transparent)]"
+                      className="flex w-49 items-center gap-2.5 rounded-full bg-(--form-surface-elevated) px-2.5 py-2 opacity-90 shadow-lg shadow-black/50 ring-1 ring-[color-mix(in_srgb,var(--form-accent)_40%,transparent)]"
                     >
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--form-accent)_10%,transparent)] text-[var(--form-accent)] ring-1 ring-[color-mix(in_srgb,var(--form-accent)_30%,transparent)]">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--form-accent)_10%,transparent)] text-(--form-accent) ring-1 ring-[color-mix(in_srgb,var(--form-accent)_30%,transparent)]">
                         <Icon className="size-3.5" />
                       </span>
                       <span className="font-mono text-[12px] text-[#F2F2F2]">{item.label}</span>

@@ -116,7 +116,16 @@ export function EditorTopbar({
       setIsSaving(false);
       toast.error("Failed to save");
     }
-  }, [formVersion, fields, isSaving, formId]);
+  }, [
+    formVersion,
+    fields,
+    isSaving,
+    formId,
+    markSaved,
+    setIsSaving,
+    updateDraft,
+    utils.forms.versions.getDraft,
+  ]);
 
   // Keyboard Shortcuts Handler
   useEffect(() => {

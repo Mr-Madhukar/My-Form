@@ -12,9 +12,6 @@ import {
   Bell,
   Keyboard,
   ShieldAlert,
-  Loader2,
-  CheckCircle2,
-  Eye,
   Info,
 } from "lucide-react";
 import {
@@ -22,7 +19,6 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
@@ -106,7 +102,7 @@ export default function SettingsPage() {
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold tracking-wide transition-all text-left cursor-pointer",
                     active
                       ? "bg-white/5 text-white ring-1 ring-white/10"
-                      : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.02]"
+                      : "text-zinc-500 hover:text-zinc-200 hover:bg-white/2"
                   )}
                 >
                   <Icon className="size-4 shrink-0" />
@@ -117,7 +113,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Settings Content */}
-          <div className="rounded-2xl border border-white/5 bg-white/[0.01] p-6 md:col-span-3">
+          <div className="rounded-2xl border border-white/5 bg-white/1 p-6 md:col-span-3">
             {/* 1. MY ACCOUNT TAB */}
             {activeTab === "account" && (
               <div className="space-y-6">

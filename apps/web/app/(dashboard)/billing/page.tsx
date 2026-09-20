@@ -12,7 +12,6 @@ import {
   Bot,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { Button } from "~/components/ui/button";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 22 };
 
@@ -86,16 +85,22 @@ const usageStats = [
   { label: "AI Summary Credits", value: 8, max: 10, unit: "runs", icon: Bot },
 ];
 
+function handlePlanMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+}
+
 function PlanCard({
   plan,
   annual,
   index,
   isCurrent,
 }: {
-  plan: (typeof plans)[number];
-  annual: boolean;
-  index: number;
-  isCurrent: boolean;
+  readonly plan: (typeof plans)[number];
+  readonly annual: boolean;
+  readonly index: number;
+  readonly isCurrent: boolean;
 }) {
   const price = annual ? plan.annualPrice : plan.monthlyPrice;
   const annualSaving =
@@ -103,10 +108,40 @@ function PlanCard({
       ? Math.round(((plan.monthlyPrice - plan.annualPrice) / plan.monthlyPrice) * 100)
       : 0;
 
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+  let borderHighlightClass = "ring-1 ring-white/6 bg-white/2 hover:ring-white/12";
+  if (plan.highlight) {
+    borderHighlightClass = "bg-linear-to-b from-[#E8854A]/30 to-[#E8854A]/8 ring-1 ring-[#E8854A]/30 hover:ring-[#E8854A]/50";
+  } else if (isCurrent) {
+    borderHighlightClass = "ring-1 ring-white/10 bg-white/3";
+  }
+
+  let ctaElement: React.ReactNode;
+  if (isCurrent) {
+    ctaElement = (
+      <div className="flex h-9 w-full items-center justify-center rounded-xl border border-white/8 text-xs font-medium text-[#4A4A4A]">
+        Current plan
+      </div>
+    );
+  } else if (plan.highlight) {
+    ctaElement = (
+      <button
+        type="button"
+        className="group/btn flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#E8854A] text-xs font-semibold text-[#0a0a0a] shadow-[0_0_20px_rgba(232,133,74,0.25)] transition-all duration-300 hover:bg-[#E8854A]/90 hover:shadow-[0_0_28px_rgba(232,133,74,0.35)]"
+      >
+        {plan.cta}
+        <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+      </button>
+    );
+  } else {
+    ctaElement = (
+      <button
+        type="button"
+        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 text-xs font-medium text-[#9B9B9B] transition-all duration-200 hover:border-white/20 hover:text-[#F2F2F2]"
+      >
+        {plan.cta}
+        <ArrowUpRight className="size-3.5" />
+      </button>
+    );
   }
 
   return (
@@ -114,14 +149,8 @@ function PlanCard({
       initial={{ opacity: 0, y: 32 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ ...spring, delay: 0.07 * index }}
-      onMouseMove={handleMouseMove}
-      className={`group relative flex flex-col rounded-[1.5rem] p-[1px] transition-all duration-500 ${
-        plan.highlight
-          ? "bg-linear-to-b from-[#E8854A]/30 to-[#E8854A]/8 ring-1 ring-[#E8854A]/30 hover:ring-[#E8854A]/50"
-          : isCurrent
-            ? "ring-1 ring-white/10 bg-white/3"
-            : "ring-1 ring-white/6 bg-white/2 hover:ring-white/12"
-      }`}
+      onMouseMove={handlePlanMouseMove}
+      className={`group relative flex flex-col rounded-[1.5rem] p-px transition-all duration-500 ${borderHighlightClass}`}
     >
       {/* Spotlight glow */}
       <div
@@ -155,7 +184,7 @@ function PlanCard({
         className={`relative flex flex-1 flex-col rounded-[calc(1.5rem-1px)] px-6 py-7 ${
           plan.highlight
             ? "bg-[#0f0e0d] border border-[#E8854A]/10"
-            : "bg-[#0d0d0d] border border-white/[0.03]"
+            : "bg-[#0d0d0d] border border-white/3"
         }`}
       >
         {/* Plan name */}
@@ -209,31 +238,11 @@ function PlanCard({
 
         {/* CTA */}
         <div className="mt-5">
-          {isCurrent ? (
-            <div className="flex h-9 w-full items-center justify-center rounded-xl border border-white/8 text-xs font-medium text-[#4A4A4A]">
-              Current plan
-            </div>
-          ) : plan.highlight ? (
-            <button
-              type="button"
-              className="group/btn flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#E8854A] text-xs font-semibold text-[#0a0a0a] shadow-[0_0_20px_rgba(232,133,74,0.25)] transition-all duration-300 hover:bg-[#E8854A]/90 hover:shadow-[0_0_28px_rgba(232,133,74,0.35)]"
-            >
-              {plan.cta}
-              <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 text-xs font-medium text-[#9B9B9B] transition-all duration-200 hover:border-white/20 hover:text-[#F2F2F2]"
-            >
-              {plan.cta}
-              <ArrowUpRight className="size-3.5" />
-            </button>
-          )}
+          {ctaElement}
         </div>
 
         {/* Divider */}
-        <div className="my-5 h-px bg-white/[0.04]" />
+        <div className="my-5 h-px bg-white/4" />
 
         {/* Features */}
         <ul className="flex flex-col gap-2.5">
@@ -243,7 +252,7 @@ function PlanCard({
                 className={`mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-full ${
                   plan.highlight
                     ? "bg-[#E8854A]/15 text-[#E8854A]"
-                    : "bg-white/[0.04] text-zinc-500"
+                    : "bg-white/4 text-zinc-500"
                 }`}
               >
                 <Check className="size-2" />
@@ -263,7 +272,7 @@ export default function BillingPage() {
   return (
     <div className="min-h-full bg-[#080808] text-[#F2F2F2]">
       {/* Ambient glows */}
-      <div className="pointer-events-none fixed left-1/2 top-0 -z-0 h-96 w-[600px] -translate-x-1/2 rounded-full bg-[#E8854A]/4 blur-[140px]" />
+      <div className="pointer-events-none fixed left-1/2 top-0 z-0 h-96 w-150 -translate-x-1/2 rounded-full bg-[#E8854A]/4 blur-[140px]" />
 
       <div className="relative mx-auto max-w-4xl px-6 py-10">
         {/* Page header */}
@@ -292,7 +301,7 @@ export default function BillingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1], delay: 0.06 }}
-          className="mb-10 rounded-2xl border border-white/6 bg-white/[0.02] p-6"
+          className="mb-10 rounded-2xl border border-white/6 bg-white/2 p-6"
         >
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
@@ -320,7 +329,7 @@ export default function BillingPage() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.05, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                  className="rounded-xl border border-white/5 bg-white/[0.02] p-4"
+                  className="rounded-xl border border-white/5 bg-white/2 p-4"
                 >
                   <div className="mb-2.5 flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
@@ -333,7 +342,7 @@ export default function BillingPage() {
                       {value.toLocaleString()} / {max.toLocaleString()}
                     </span>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.04]">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/4">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
@@ -367,7 +376,7 @@ export default function BillingPage() {
           </div>
 
           {/* Billing toggle */}
-          <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/6 bg-white/[0.02] p-1 pr-3">
+          <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/6 bg-white/2 p-1 pr-3">
             <button
               type="button"
               onClick={() => setAnnual(false)}

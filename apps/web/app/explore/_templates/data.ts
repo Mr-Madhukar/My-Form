@@ -6,7 +6,9 @@ export interface TemplateField {
   type: FieldType;
   label: string;
   required: boolean;
-  config: Record<string, any>;
+  config: Record<string, unknown> & {
+    options?: { id: string; label: string }[];
+  };
 }
 
 export interface FormTemplate {

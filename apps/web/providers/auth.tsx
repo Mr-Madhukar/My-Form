@@ -1,10 +1,11 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "~/trpc/client";
 import { useAuthStore } from "~/stores/auth";
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { readonly children: React.ReactNode }) {
   const { _setUser, _setLoading, _setLogout, _setLogoutAll } = useAuthStore();
   const [hasLoggedInCookie, setHasLoggedInCookie] = useState<boolean | null>(null);
 

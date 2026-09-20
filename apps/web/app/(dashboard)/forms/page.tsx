@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
-import type { FieldType } from "@repo/forms";
+import type { FieldType, FormTheme } from "@repo/forms";
 import { ShareFormPopover } from "~/components/share-form-popover";
 import { trpc } from "~/trpc/client";
 import { Button } from "~/components/ui/button";
@@ -43,9 +43,6 @@ import {
   ContextMenuTrigger,
 } from "~/components/ui/context-menu";
 
-const ACCENT = "#E8854A";
-const EASE = "ease-[cubic-bezier(0.32,0.72,0,1)]";
-
 // Asymmetric bento spans cycled by index. Mobile collapses to full width.
 const SPANS = [
   "md:col-span-4",
@@ -65,13 +62,13 @@ type FormListItem = {
   status: string;
 };
 
-function StatusPill({ status }: { status: string }) {
+function StatusPill({ status }: { readonly status: string }) {
   const published = status === "published";
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em]",
-        published ? "bg-[#E8854A]/12 text-[#E8854A]" : "bg-white/[0.06] text-[#6B6B6B]",
+        published ? "bg-[#E8854A]/12 text-[#E8854A]" : "bg-white/6 text-[#6B6B6B]",
       )}
     >
       {published ? <Globe className="size-2.5" /> : <FileText className="size-2.5" />}
@@ -87,11 +84,11 @@ function DeleteDialog({
   onConfirm,
   isPending,
 }: {
-  form: FormListItem | null;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  onConfirm: () => void;
-  isPending: boolean;
+  readonly form: FormListItem | null;
+  readonly open: boolean;
+  readonly onOpenChange: (v: boolean) => void;
+  readonly onConfirm: () => void;
+  readonly isPending: boolean;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,11 +121,11 @@ function QuickAction({
   delay,
   danger,
 }: {
-  icon: typeof Pencil;
-  label: string;
-  onClick: () => void;
-  delay: number;
-  danger?: boolean;
+  readonly icon: typeof Pencil;
+  readonly label: string;
+  readonly onClick: () => void;
+  readonly delay: number;
+  readonly danger?: boolean;
 }) {
   return (
     <Tooltip>
@@ -160,11 +157,11 @@ function QuickAction({
 }
 
 interface DuplicateDialogProps {
-  form: { id: string; title: string } | null;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  onConfirm: (options: { title: string; copyFields: boolean; copyTheme: boolean; selectedPreset: string | null }) => void;
-  isPending: boolean;
+  readonly form: { id: string; title: string } | null;
+  readonly open: boolean;
+  readonly onOpenChange: (v: boolean) => void;
+  readonly onConfirm: (options: { title: string; copyFields: boolean; copyTheme: boolean; selectedPreset: string | null }) => void;
+  readonly isPending: boolean;
 }
 
 function DuplicateDialog({
@@ -201,7 +198,7 @@ function DuplicateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800/60 text-zinc-100 p-0 overflow-hidden gap-0">
         <div className="relative flex items-center gap-4 px-6 pt-6 pb-5 border-b border-zinc-800/60">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#E8854A]/6 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-linear-to-br from-[#E8854A]/6 to-transparent pointer-events-none" />
           <div className="relative flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10">
             <Copy className="size-5 text-zinc-300" />
           </div>
@@ -218,8 +215,9 @@ function DuplicateDialog({
         <div className="space-y-4 px-6 py-5">
           {/* Title input */}
           <div className="space-y-2">
-            <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">New Title</label>
+            <label htmlFor="duplicate-form-title" className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">New Title</label>
             <input
+              id="duplicate-form-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -230,7 +228,7 @@ function DuplicateDialog({
 
           {/* Theme Preset Selection */}
           <div className="space-y-2">
-            <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Theme Preset</label>
+            <span className="block text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Theme Preset</span>
             <div className="grid grid-cols-3 gap-2">
               {presets.map((p) => (
                 <button
@@ -316,6 +314,12 @@ function DuplicateDialog({
   );
 }
 
+function handleCardMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+}
+
 function FormCard({
   form,
   index,
@@ -323,36 +327,37 @@ function FormCard({
   onDuplicate,
   onToggleAccepting,
 }: {
-  form: FormListItem;
-  index: number;
-  onDelete: (form: FormListItem) => void;
-  onDuplicate: (form: FormListItem) => void;
-  onToggleAccepting: (formId: string, isAccepting: boolean) => void;
+  readonly form: FormListItem;
+  readonly index: number;
+  readonly onDelete: (form: FormListItem) => void;
+  readonly onDuplicate: (form: FormListItem) => void;
+  readonly onToggleAccepting: (formId: string, isAccepting: boolean) => void;
 }) {
   const router = useRouter();
-
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  }
-
   const isAccepting = form.isAcceptingResponses;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
+          role="button"
+          tabIndex={0}
           style={{ animationDelay: `${index * 70}ms` }}
           className={cn(
             SPANS[index % SPANS.length],
             "animate-fade-up col-span-1",
-            "group relative cursor-pointer rounded-[1.75rem] bg-white/[0.02] p-1.5 ring-1 ring-white/[0.06]",
+            "group relative cursor-pointer rounded-[1.75rem] bg-white/2 p-1.5 ring-1 ring-white/6",
             "transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            "hover:ring-white/[0.12]",
+            "hover:ring-white/12",
           )}
           onClick={() => router.push(`/forms/${form.id}/edit`)}
-          onMouseMove={handleMouseMove}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              router.push(`/forms/${form.id}/edit`);
+            }
+          }}
+          onMouseMove={handleCardMouseMove}
         >
           {/* Spotlight border overlay */}
           <div
@@ -365,7 +370,7 @@ function FormCard({
           />
 
           {/* Inner core */}
-          <div className="relative flex h-full min-h-[8.5rem] flex-col gap-4 overflow-hidden rounded-[1.4rem] bg-[#111] p-5">
+          <div className="relative flex h-full min-h-34 flex-col gap-4 overflow-hidden rounded-[1.4rem] bg-[#111] p-5">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <h3 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-white">
@@ -384,15 +389,18 @@ function FormCard({
 
             {/* Quick actions */}
             <div
+              role="group"
+              aria-label="Card actions"
               className={cn(
                 "pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-end gap-2 p-5",
-                "bg-gradient-to-t from-[#111] via-[#111]/90 to-transparent pt-10",
+                "bg-linear-to-t from-[#111] via-[#111]/90 to-transparent pt-10",
                 "translate-y-2 opacity-0",
                 "transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
                 "group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100",
                 "[@media(hover:none)]:pointer-events-auto [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100",
               )}
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             >
               <QuickAction
                 icon={Pencil}
@@ -552,11 +560,11 @@ function GenerateModal({
   isPending,
   hasError,
 }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  onGenerate: (prompt: string) => void;
-  isPending: boolean;
-  hasError: boolean;
+  readonly open: boolean;
+  readonly onOpenChange: (v: boolean) => void;
+  readonly onGenerate: (prompt: string) => void;
+  readonly isPending: boolean;
+  readonly hasError: boolean;
 }) {
   const [prompt, setPrompt] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -683,10 +691,10 @@ function GenerateModal({
   );
 }
 
-function EmptyState({ onNew, isPending }: { onNew: () => void; isPending: boolean }) {
+function EmptyState({ onNew, isPending }: { readonly onNew: () => void; readonly isPending: boolean }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-      <p className="select-none text-6xl font-semibold tracking-tighter text-white/[0.06] sm:text-7xl">
+      <p className="select-none text-6xl font-semibold tracking-tighter text-white/6 sm:text-7xl">
         No forms yet
       </p>
       <Button
@@ -710,15 +718,15 @@ function EmptyState({ onNew, isPending }: { onNew: () => void; isPending: boolea
   );
 }
 
-function CardSkeleton({ index }: { index: number }) {
+function CardSkeleton({ index }: { readonly index: number }) {
   return (
     <div
       className={cn(
         SPANS[index % SPANS.length],
-        "col-span-1 rounded-[1.75rem] bg-white/[0.02] p-1.5 ring-1 ring-white/[0.06]",
+        "col-span-1 rounded-[1.75rem] bg-white/2 p-1.5 ring-1 ring-white/6",
       )}
     >
-      <div className="h-[8.5rem] animate-pulse overflow-hidden rounded-[1.4rem] bg-[#111]">
+      <div className="h-34 animate-pulse overflow-hidden rounded-[1.4rem] bg-[#111]">
         <div
           className="size-full animate-shimmer"
           style={{
@@ -766,13 +774,7 @@ export default function FormsPage() {
     onError: () => toast.error("Failed to delete form"),
   });
 
-  const restoreMutation = trpc.forms.restore.useMutation({
-    onSuccess: () => {
-      formsQuery.refetch();
-      toast.success("Form restored");
-    },
-    onError: () => toast.error("Failed to restore form"),
-  });
+
 
   const toggleAcceptingMutation = trpc.forms.toggleAccepting.useMutation({
     onSuccess: () => {
@@ -821,7 +823,7 @@ export default function FormsPage() {
       let finalTheme = undefined;
       if (options.selectedPreset && options.selectedPreset in presetColors) {
         finalTheme = {
-          preset: options.selectedPreset as any,
+          preset: options.selectedPreset as FormTheme["preset"],
           accentColor: presetColors[options.selectedPreset]!,
         };
       } else if (options.copyTheme) {
@@ -840,7 +842,7 @@ export default function FormsPage() {
               type: f.type,
               label: f.label,
               required: f.required,
-              config: f.config as Record<string, any>,
+              config: f.config as Record<string, unknown>,
             }))
           : [],
       });
@@ -904,9 +906,6 @@ export default function FormsPage() {
     }
   }
 
-  // restoreMutation preserved for soft-delete restore flow.
-  void restoreMutation;
-
   const forms = formsQuery.data ?? [];
   const isLoading = workspacesQuery.isPending || formsQuery.isPending;
 
@@ -915,10 +914,38 @@ export default function FormsPage() {
     { enabled: !!workspaceId },
   );
 
+  let formsContent: React.ReactNode;
+  if (isLoading) {
+    formsContent = (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <CardSkeleton key={i} index={i} />
+        ))}
+      </div>
+    );
+  } else if (forms.length === 0) {
+    formsContent = <EmptyState onNew={handleNew} isPending={createMutation.isPending} />;
+  } else {
+    formsContent = (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+        {forms.map((form, i) => (
+          <FormCard
+            key={form.id}
+            index={i}
+            form={{ ...form, createdAt: new Date(form.createdAt) }}
+            onDelete={setDeleteTarget}
+            onDuplicate={setDuplicateTarget}
+            onToggleAccepting={handleToggleAccepting}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       {/* Page header */}
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/[0.06] px-6">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/6 px-6">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold tracking-tight text-white">Forms</h1>
           {dashboardStats.data && (
@@ -950,7 +977,7 @@ export default function FormsPage() {
             disabled={createMutation.isPending || !workspaceId}
             className="group gap-2.5 rounded-full py-1.5 pl-4 pr-1.5 text-sm font-medium bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20 hover:bg-[#E8854A]/20 hover:ring-[#E8854A]/40 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] h-auto"
           >
-            New form
+            <span>New form</span>
             <span className="flex size-7 items-center justify-center rounded-full bg-[#E8854A] text-[#111] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-90">
               {createMutation.isPending ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -964,28 +991,7 @@ export default function FormsPage() {
 
       {/* Content */}
       <div className="flex flex-1 flex-col px-6 py-6">
-        {isLoading ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <CardSkeleton key={i} index={i} />
-            ))}
-          </div>
-        ) : forms.length === 0 ? (
-          <EmptyState onNew={handleNew} isPending={createMutation.isPending} />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
-            {forms.map((form, i) => (
-              <FormCard
-                key={form.id}
-                index={i}
-                form={{ ...form, createdAt: new Date(form.createdAt) }}
-                onDelete={setDeleteTarget}
-                onDuplicate={setDuplicateTarget}
-                onToggleAccepting={handleToggleAccepting}
-              />
-            ))}
-          </div>
-        )}
+        {formsContent}
       </div>
 
       <DeleteDialog

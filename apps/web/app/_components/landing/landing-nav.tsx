@@ -4,8 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import React from "react";
 import logoImg from "~/public/logo.png";
-import { Menu, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Menu } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   Sheet,
@@ -27,19 +26,66 @@ const navLinks = [
   { href: "#faq", label: "FAQ" },
 ];
 
+function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+}
+
 export function LandingNav() {
   const { user, isLoading } = useAuthStore();
-  const [mounted, setMounted] = React.useState(false);
-  const { theme, setTheme } = useTheme();
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  let desktopAuthActions: React.ReactNode;
+  if (isLoading) {
+    desktopAuthActions = <div className="h-8 w-24 animate-pulse rounded-full bg-white/5" />;
+  } else if (user) {
+    desktopAuthActions = (
+      <LandingButton href="/forms" size="sm">
+        Dashboard
+      </LandingButton>
+    );
+  } else {
+    desktopAuthActions = (
+      <>
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="h-8 rounded-full text-xs text-[#6B6B6B] hover:bg-white/6 hover:text-[#F2F2F2] px-3.5"
+        >
+          <Link href="/login">Login</Link>
+        </Button>
+        <LandingButton href="/signup" size="sm">
+          Start free
+        </LandingButton>
+      </>
+    );
+  }
 
-  function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+  let mobileAuthActions: React.ReactNode;
+  if (isLoading) {
+    mobileAuthActions = <div className="h-9 w-full animate-pulse rounded-xl bg-white/5" />;
+  } else if (user) {
+    mobileAuthActions = (
+      <LandingButton href="/forms" fullWidth>
+        Dashboard
+      </LandingButton>
+    );
+  } else {
+    mobileAuthActions = (
+      <>
+        <Button
+          variant="outline"
+          asChild
+          className="rounded-full border-white/8 bg-white/3 text-[#F2F2F2]"
+        >
+          <Link href="/login">Login</Link>
+        </Button>
+        <LandingButton href="/signup" fullWidth>
+          Start building
+        </LandingButton>
+      </>
+    );
   }
 
   return (
@@ -82,27 +128,7 @@ export function LandingNav() {
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
-            {isLoading ? (
-              <div className="h-8 w-24 animate-pulse rounded-full bg-white/5" />
-            ) : user ? (
-              <LandingButton href="/forms" size="sm">
-                Dashboard
-              </LandingButton>
-            ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className="h-8 rounded-full text-xs text-[#6B6B6B] hover:bg-white/6 hover:text-[#F2F2F2] px-3.5"
-                >
-                  <Link href="/login">Login</Link>
-                </Button>
-                <LandingButton href="/signup" size="sm">
-                  Start free
-                </LandingButton>
-              </>
-            )}
+            {desktopAuthActions}
           </div>
 
           <div className="md:hidden flex items-center pr-1.5">
@@ -141,26 +167,7 @@ export function LandingNav() {
                     </SheetClose>
                   ))}
                   <div className="mt-4 grid gap-2">
-                    {isLoading ? (
-                      <div className="h-9 w-full animate-pulse rounded-xl bg-white/5" />
-                    ) : user ? (
-                      <LandingButton href="/forms" fullWidth>
-                        Dashboard
-                      </LandingButton>
-                    ) : (
-                      <>
-                        <Button
-                          variant="outline"
-                          asChild
-                          className="rounded-full border-white/8 bg-white/3 text-[#F2F2F2]"
-                        >
-                          <Link href="/login">Login</Link>
-                        </Button>
-                        <LandingButton href="/signup" fullWidth>
-                          Start building
-                        </LandingButton>
-                      </>
-                    )}
+                    {mobileAuthActions}
                   </div>
                 </div>
               </SheetContent>

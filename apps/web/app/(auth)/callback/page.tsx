@@ -3,13 +3,13 @@
 import { useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { trpc } from "~/trpc/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card } from "~/components/ui/card";
 import { toast } from "sonner";
 
 const bezelClass =
-  "animate-fade-up rounded-[1.75rem] bg-white/[0.02] p-1.5 ring-1 ring-white/[0.06]";
+  "animate-fade-up rounded-[1.75rem] bg-white/2 p-1.5 ring-1 ring-white/6";
 const cardClass =
-  "gap-6 rounded-[1.4rem] border-0 bg-[#111] py-7 text-[#F2F2F2] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] ring-1 ring-white/[0.04]";
+  "gap-6 rounded-[1.4rem] border-0 bg-[#111] py-7 text-[#F2F2F2] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] ring-1 ring-white/4";
 
 function CallbackHandler() {
   const searchParams = useSearchParams();
@@ -42,7 +42,7 @@ function CallbackHandler() {
 
   return (
     <div className={bezelClass}>
-      <Card className={`${cardClass} min-h-[300px] flex flex-col items-center justify-center`}>
+      <Card className={`${cardClass} min-h-75 flex flex-col items-center justify-center`}>
         <div className="flex flex-col items-center gap-4 text-center px-6">
           {exchangeMutation.isError ? (
             <>
@@ -69,7 +69,7 @@ export default function CallbackPage() {
     <Suspense
       fallback={
         <div className={bezelClass}>
-          <Card className={`${cardClass} min-h-[300px] flex flex-col items-center justify-center`}>
+          <Card className={`${cardClass} min-h-75 flex flex-col items-center justify-center`}>
             <div className="flex flex-col items-center gap-3">
               <span className="size-6 animate-spin rounded-full border-2 border-[#E8854A] border-t-transparent" />
               <p className="text-sm text-[#6B6B6B]">Loading...</p>

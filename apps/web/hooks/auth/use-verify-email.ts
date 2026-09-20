@@ -21,7 +21,7 @@ export function useVerifyEmail() {
       called.current = true;
       mutation.mutate({ token });
     }
-  }, [token]);
+  }, [token, mutation]);
 
   return {
     token,

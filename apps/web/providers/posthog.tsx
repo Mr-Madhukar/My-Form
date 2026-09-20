@@ -14,7 +14,7 @@ function PageviewTracker() {
   useEffect(() => {
     const url = pathname + (searchParams.toString() ? `?${searchParams}` : "");
     ph.capture("$pageview", { $current_url: url });
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, ph]);
 
   return null;
 }
@@ -32,12 +32,12 @@ function UserIdentifier() {
     } else {
       ph.reset();
     }
-  }, [user?.id]);
+  }, [user, ph]);
 
   return null;
 }
 
-export function PostHogProvider({ children }: { children: React.ReactNode }) {
+export function PostHogProvider({ children }: { readonly children: React.ReactNode }) {
   return (
     <PHProvider client={posthog}>
       <Suspense fallback={null}>

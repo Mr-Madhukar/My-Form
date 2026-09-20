@@ -78,7 +78,7 @@ export function ConditionalPanel({
     !["is_empty", "is_not_empty"].includes(op);
 
   return (
-    <div className="border-t border-white/[0.06] pt-4">
+    <div className="border-t border-white/6 pt-4">
       {/* Section header */}
       <button
         type="button"
@@ -89,7 +89,7 @@ export function ConditionalPanel({
           <div className="flex size-5 items-center justify-center rounded-md bg-[#F59E0B]/10">
             <Zap className="size-3 text-[#F59E0B]" />
           </div>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#6B6B6B]">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-[#6B6B6B]">
             Conditional Logic
           </span>
           {conditions.length > 0 && (
@@ -115,12 +115,10 @@ export function ConditionalPanel({
             </p>
           )}
 
-          {conditions.map((condition) => {
-            const sourceField = sourceFields.find((f) => f.id === condition.sourceFieldId);
-            return (
+          {conditions.map((condition) => (
               <div
                 key={condition.id}
-                className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-2.5"
+                className="rounded-xl border border-white/6 bg-white/2 p-3 space-y-2.5"
               >
                 {/* Action selector */}
                 <div className="flex items-center gap-2">
@@ -129,7 +127,7 @@ export function ConditionalPanel({
                     onChange={(e) =>
                       updateCondition(condition.id, { action: e.target.value as ConditionAction })
                     }
-                    className="rounded-lg border border-white/[0.08] bg-[#141414] px-2 py-1 text-[11px] text-[#F2F2F2] outline-none focus:border-[#F59E0B]/40"
+                    className="rounded-lg border border-white/8 bg-[#141414] px-2 py-1 text-[11px] text-[#F2F2F2] outline-none focus:border-[#F59E0B]/40"
                   >
                     {ACTIONS.map((a) => (
                       <option key={a.value} value={a.value}>
@@ -141,7 +139,7 @@ export function ConditionalPanel({
                   <button
                     type="button"
                     onClick={() => removeCondition(condition.id)}
-                    className="ml-auto rounded-md p-1 text-[#4A4A4A] hover:bg-white/[0.06] hover:text-[#F43F5E]"
+                    className="ml-auto rounded-md p-1 text-[#4A4A4A] hover:bg-white/6 hover:text-[#F43F5E]"
                   >
                     <Trash2 className="size-3" />
                   </button>
@@ -153,7 +151,7 @@ export function ConditionalPanel({
                   onChange={(e) =>
                     updateCondition(condition.id, { sourceFieldId: e.target.value })
                   }
-                  className="w-full rounded-lg border border-white/[0.08] bg-[#141414] px-2.5 py-1.5 text-[11px] text-[#F2F2F2] outline-none focus:border-[#F59E0B]/40"
+                  className="w-full rounded-lg border border-white/8 bg-[#141414] px-2.5 py-1.5 text-[11px] text-[#F2F2F2] outline-none focus:border-[#F59E0B]/40"
                 >
                   {sourceFields.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -168,7 +166,7 @@ export function ConditionalPanel({
                   onChange={(e) =>
                     updateCondition(condition.id, { operator: e.target.value as ConditionOperator })
                   }
-                  className="w-full rounded-lg border border-white/[0.08] bg-[#141414] px-2.5 py-1.5 text-[11px] text-[#F2F2F2] outline-none focus:border-[#F59E0B]/40"
+                  className="w-full rounded-lg border border-white/8 bg-[#141414] px-2.5 py-1.5 text-[11px] text-[#F2F2F2] outline-none focus:border-[#F59E0B]/40"
                 >
                   {OPERATORS.map((op) => (
                     <option key={op.value} value={op.value}>
@@ -186,12 +184,11 @@ export function ConditionalPanel({
                       updateCondition(condition.id, { value: e.target.value })
                     }
                     placeholder="Enter value..."
-                    className="w-full rounded-lg border border-white/[0.08] bg-[#141414] px-2.5 py-1.5 text-[11px] text-[#F2F2F2] placeholder-[#3A3A3A] outline-none focus:border-[#F59E0B]/40"
+                    className="w-full rounded-lg border border-white/8 bg-[#141414] px-2.5 py-1.5 text-[11px] text-[#F2F2F2] placeholder-[#3A3A3A] outline-none focus:border-[#F59E0B]/40"
                   />
                 )}
               </div>
-            );
-          })}
+          ))}
 
           {/* Add condition button */}
           {sourceFields.length > 0 && (
@@ -199,7 +196,7 @@ export function ConditionalPanel({
               type="button"
               onClick={addCondition}
               className={cn(
-                "flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/[0.08] py-2 text-[11px] text-[#4A4A4A]",
+                "flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/8 py-2 text-[11px] text-[#4A4A4A]",
                 EASE,
                 "hover:border-[#F59E0B]/30 hover:text-[#F59E0B]",
               )}

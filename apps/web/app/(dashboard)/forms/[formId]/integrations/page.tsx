@@ -9,10 +9,8 @@ import {
   FileSpreadsheet,
   AlertCircle,
   ExternalLink,
-  Link2,
 } from "lucide-react";
 import { trpc } from "~/trpc/client";
-import { cn } from "~/lib/utils";
 import { FormTabs } from "../_components/form-tabs";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
@@ -26,7 +24,9 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 
-export default function IntegrationsPage({ params }: { params: Promise<{ formId: string }> }) {
+const SPREADSHEET_ID_REGEX = /\/d\/([\w-]+)/;
+
+export default function IntegrationsPage({ params }: { readonly params: Promise<{ readonly formId: string }> }) {
   const { formId } = use(params);
   const utils = trpc.useUtils();
 
@@ -48,7 +48,7 @@ export default function IntegrationsPage({ params }: { params: Promise<{ formId:
     try {
       let spreadsheetId = "";
       if (spreadsheetUrlInput.trim()) {
-        const matches = spreadsheetUrlInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        const matches = SPREADSHEET_ID_REGEX.exec(spreadsheetUrlInput);
         spreadsheetId = matches ? matches[1]! : spreadsheetUrlInput.trim();
       }
       await connectMutation.mutateAsync({
@@ -79,7 +79,7 @@ export default function IntegrationsPage({ params }: { params: Promise<{ formId:
   if (formQuery.isPending) {
     return (
       <div className="flex h-full flex-col bg-[#080808]">
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.07] px-6">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/7 px-6">
           <div className="h-4 w-40 animate-shimmer rounded-full bg-linear-to-r from-white/4 via-white/10 to-white/4 bg-size-[200%_100%]" />
         </div>
         <div className="flex flex-1 items-center justify-center">
@@ -103,7 +103,7 @@ export default function IntegrationsPage({ params }: { params: Promise<{ formId:
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#080808] text-[#F2F2F2]">
       {/* Header */}
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.07] px-6">
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/7 px-6">
         <div className="flex items-center gap-3">
           <Link
             href={`/forms/${formId}/edit`}
@@ -131,7 +131,7 @@ export default function IntegrationsPage({ params }: { params: Promise<{ formId:
 
         {/* Integration list */}
         <div className="grid gap-6">
-          <div className="rounded-2xl border border-white/6 bg-white/[0.01] p-6 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.02]">
+          <div className="rounded-2xl border border-white/6 bg-white/1 p-6 transition-all duration-300 hover:border-white/10 hover:bg-white/2">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
               <div className="flex items-start gap-4">
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#10B981]/10 text-[#10B981] ring-1 ring-[#10B981]/20">
@@ -155,7 +155,7 @@ export default function IntegrationsPage({ params }: { params: Promise<{ formId:
                   </p>
 
                   {isConnected && sheetId && (
-                    <div className="mt-4 rounded-xl bg-white/[0.03] border border-white/5 p-3.5 space-y-1.5">
+                    <div className="mt-4 rounded-xl bg-white/3 border border-white/5 p-3.5 space-y-1.5">
                       <div className="flex items-center gap-2 text-xs text-[#6B6B6B]">
                         <span>Connected Spreadsheet ID:</span>
                         <code className="font-mono text-[#F2F2F2] bg-white/5 px-1.5 py-0.5 rounded text-[10px] truncate max-w-xs md:max-w-md block">
@@ -211,10 +211,14 @@ export default function IntegrationsPage({ params }: { params: Promise<{ formId:
 
                       <div className="space-y-4 py-4">
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block">
+                          <label
+                            htmlFor="spreadsheet-url-input"
+                            className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block"
+                          >
                             Spreadsheet URL or ID (Optional)
                           </label>
                           <input
+                            id="spreadsheet-url-input"
                             type="text"
                             placeholder="https://docs.google.com/spreadsheets/d/..."
                             value={spreadsheetUrlInput}

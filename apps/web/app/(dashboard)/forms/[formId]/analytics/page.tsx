@@ -4,7 +4,7 @@ import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BarChart3, Eye, MousePointerClick, CheckCircle2, TrendingUp } from "lucide-react";
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   AreaChart, Area,
 } from "recharts";
@@ -27,13 +27,13 @@ function MetricCard({
   value,
   accent,
 }: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  accent: string;
+  readonly icon: React.ElementType;
+  readonly label: string;
+  readonly value: string | number;
+  readonly accent: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04]">
+    <div className="group relative overflow-hidden rounded-2xl border border-white/6 bg-white/2 p-5 transition-all duration-300 hover:border-white/12 hover:bg-white/4">
       <div className="mb-3 flex items-center gap-2">
         <div
           className="flex size-8 items-center justify-center rounded-xl"
@@ -56,9 +56,9 @@ function MetricCard({
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:border-white/[0.10] h-full flex flex-col justify-between">
+    <div className="rounded-2xl border border-white/6 bg-white/2 p-5 transition-all duration-300 hover:border-white/10 h-full flex flex-col justify-between">
       <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6B6B6B]">
         {title}
       </h3>
@@ -67,17 +67,36 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+  readonly active?: boolean;
+  readonly payload?: ReadonlyArray<{
+    readonly name?: string | number;
+    readonly value?: string | number | readonly (string | number)[];
+  }>;
+  readonly label?: string | number;
+}
+
+function CustomTooltip({ active, payload, label }: Readonly<CustomTooltipProps>) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border border-white/[0.10] bg-[#1A1A1A] px-3 py-2 text-xs shadow-xl">
+    <div className="rounded-xl border border-white/10 bg-[#1A1A1A] px-3 py-2 text-xs shadow-xl">
       <p className="mb-1 font-medium text-[#F2F2F2]">{label ?? payload[0]?.name}</p>
       <p className="font-mono text-[#E8854A]">{payload[0]?.value}%</p>
     </div>
   );
-};
+}
 
-export default function AnalyticsPage({ params }: { params: Promise<{ formId: string }> }) {
+function TimelineTooltip({ active, payload, label }: Readonly<CustomTooltipProps>) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#1A1A1A] px-3 py-2 text-xs shadow-xl">
+      <p className="mb-1 font-medium text-[#F2F2F2]">{label}</p>
+      <p className="font-mono text-[#E8854A]">{payload[0]?.value} responses</p>
+    </div>
+  );
+}
+
+export default function AnalyticsPage({ params }: { readonly params: Promise<{ readonly formId: string }> }) {
   const { formId } = use(params);
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "all">("7d");
 
@@ -116,11 +135,330 @@ export default function AnalyticsPage({ params }: { params: Promise<{ formId: st
     const mobile = Math.floor(37 - (total % 3));
     const tablet = 100 - desktop - mobile;
     return [
-      { name: "Desktop", value: desktop },
-      { name: "Mobile", value: mobile },
-      { name: "Tablet", value: tablet },
+      { name: "Desktop", value: desktop, fill: DEVICE_COLORS[0] },
+      { name: "Mobile", value: mobile, fill: DEVICE_COLORS[1] },
+      { name: "Tablet", value: tablet, fill: DEVICE_COLORS[2] },
     ];
   }, [analytics?.totalResponses]);
+
+  let analyticsContent: React.ReactNode;
+  if (isLoading) {
+    analyticsContent = (
+      <div className="space-y-6">
+        {/* Metric skeleton */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={`metric-skeleton-${i}`}
+              className="h-28 animate-shimmer rounded-2xl border border-white/6 bg-linear-to-r from-white/2 via-white/5 to-white/2 bg-size-[200%_100%]"
+              style={{ animationDelay: `${i * 80}ms` }}
+            />
+          ))}
+        </div>
+        {/* Chart skeletons */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div
+              key={`chart-skeleton-${i}`}
+              className="h-64 animate-shimmer rounded-2xl border border-white/6 bg-linear-to-r from-white/2 via-white/5 to-white/2 bg-size-[200%_100%]"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  } else if (!analytics || analytics.totalResponses === 0) {
+    analyticsContent = (
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 py-24 text-center">
+        <div className="flex size-16 items-center justify-center rounded-2xl border border-dashed border-[#E8854A]/30">
+          <BarChart3 className="size-6 text-[#3A3A3A]" />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-2xl font-semibold tracking-tight text-[#3A3A3A]">
+            No analytics data yet
+          </p>
+          <p className="text-xs text-[#6B6B6B]">
+            Charts and metrics will appear here once your form receives responses.
+          </p>
+        </div>
+      </div>
+    );
+  } else {
+    analyticsContent = (
+      <div className="space-y-6">
+        {/* Metrics row */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <MetricCard
+            icon={CheckCircle2}
+            label="Total Responses"
+            value={analytics.totalResponses}
+            accent="#10B981"
+          />
+          <MetricCard
+            icon={Eye}
+            label="Total Views"
+            value={analytics.totalViews}
+            accent="#3B82F6"
+          />
+          <MetricCard
+            icon={MousePointerClick}
+            label="Started"
+            value={analytics.totalStarts}
+            accent="#F59E0B"
+          />
+          <MetricCard
+            icon={TrendingUp}
+            label="Completion Rate"
+            value={`${analytics.completionRate}%`}
+            accent="#7C3AED"
+          />
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          {/* Response timeline */}
+          <div className="lg:col-span-2">
+            <div className="rounded-2xl border border-white/6 bg-white/2 p-5 transition-all duration-300 hover:border-white/10 h-full flex flex-col justify-between min-h-75">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6B6B6B]">
+                  Responses Over Time
+                </h3>
+                {/* Switcher pills */}
+                <div className="flex gap-1 bg-white/2 p-0.5 rounded-lg border border-white/6">
+                  {(["7d", "30d", "all"] as const).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setTimeRange(r)}
+                      className={cn(
+                        "px-2 py-0.5 text-[9px] font-mono uppercase rounded-md transition-all cursor-pointer",
+                        timeRange === r
+                          ? "bg-[#E8854A]/12 text-[#E8854A] border border-[#E8854A]/20"
+                          : "text-zinc-500 hover:text-zinc-300 border border-transparent"
+                      )}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  {timeRange === "7d" ? (
+                    <BarChart data={filteredTimelineData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#3A3A3A"
+                        tick={{ fill: "#6B6B6B", fontSize: 10 }}
+                        tickFormatter={(v: string) => {
+                          const d = new Date(v);
+                          return `${d.getMonth() + 1}/${d.getDate()}`;
+                        }}
+                      />
+                      <YAxis
+                        stroke="#3A3A3A"
+                        tick={{ fill: "#6B6B6B", fontSize: 10 }}
+                        allowDecimals={false}
+                      />
+                      <Tooltip content={<TimelineTooltip />} />
+                      <Bar dataKey="count" fill="#E8854A" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  ) : (
+                    <AreaChart data={filteredTimelineData}>
+                      <defs>
+                        <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#E8854A" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#E8854A" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#3A3A3A"
+                        tick={{ fill: "#6B6B6B", fontSize: 10 }}
+                        tickFormatter={(v: string) => {
+                          const d = new Date(v);
+                          return `${d.getMonth() + 1}/${d.getDate()}`;
+                        }}
+                      />
+                      <YAxis
+                        stroke="#3A3A3A"
+                        tick={{ fill: "#6B6B6B", fontSize: 10 }}
+                        allowDecimals={false}
+                      />
+                      <Tooltip content={<TimelineTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="count"
+                        stroke="#E8854A"
+                        strokeWidth={2}
+                        fill="url(#areaGradient)"
+                      />
+                    </AreaChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Device breakdown */}
+          <div className="lg:col-span-1">
+            <ChartCard title="Device Breakdown">
+              <div className="h-56 flex flex-col justify-between">
+                <div className="h-40 relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={deviceData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={70}
+                        paddingAngle={3}
+                        dataKey="value"
+                        strokeWidth={0}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Centered Total percentage */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider leading-none">Top device</span>
+                    <span className="text-sm font-bold text-white mt-1 leading-none">Desktop</span>
+                  </div>
+                </div>
+                {/* Legend */}
+                <div className="flex justify-center gap-3 shrink-0">
+                  {deviceData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-1">
+                      <div
+                        className="size-2 rounded-full shrink-0"
+                        style={{ background: item.fill }}
+                      />
+                      <span className="text-[10px] text-zinc-400 font-mono">
+                        {item.name} ({item.value}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </ChartCard>
+          </div>
+        </div>
+
+        {/* Per-field charts */}
+        {fields.length > 0 && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {fields.map((field) => {
+              const isPie =
+                field.type === "single_choice" || field.type === "multiple_choice";
+              const isRating = field.type === "rating";
+              const isNumber = field.type === "number";
+
+              if (isPie) {
+                const pieData = field.data.map((item: { label?: string; value?: string | number }, idx: number) => ({
+                  ...item,
+                  fill: CHART_COLORS[idx % CHART_COLORS.length],
+                }));
+
+                return (
+                  <ChartCard key={field.fieldId} title={field.label}>
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            dataKey="value"
+                            nameKey="label"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            innerRadius={45}
+                            paddingAngle={2}
+                            strokeWidth={0}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* Legend */}
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {pieData.map((item: { label?: string; value?: string | number; fill?: string }) => (
+                        <div key={String(item.label ?? item.value)} className="flex items-center gap-1.5">
+                          <div
+                            className="size-2 rounded-full"
+                            style={{ background: item.fill }}
+                          />
+                          <span className="text-[10px] text-[#6B6B6B]">
+                            {item.label} ({item.value})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </ChartCard>
+                );
+              }
+
+              if (isRating) {
+                const ratingData = field.data.map((item: { label?: string; value?: string | number }, idx: number) => ({
+                  ...item,
+                  fill: CHART_COLORS[idx % CHART_COLORS.length],
+                }));
+
+                return (
+                  <ChartCard key={field.fieldId} title={field.label}>
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={ratingData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
+                          <XAxis
+                            dataKey="label"
+                            stroke="#3A3A3A"
+                            tick={{ fill: "#6B6B6B", fontSize: 10 }}
+                          />
+                          <YAxis
+                            stroke="#3A3A3A"
+                            tick={{ fill: "#6B6B6B", fontSize: 10 }}
+                            allowDecimals={false}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="value" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </ChartCard>
+                );
+              }
+
+              if (isNumber) {
+                return (
+                  <ChartCard key={field.fieldId} title={field.label}>
+                    <div className="grid grid-cols-2 gap-3">
+                      {field.data.map((item: { label?: string; value?: string | number }) => (
+                        <div
+                          key={item.label ?? String(item.value)}
+                          className="rounded-xl border border-white/6 bg-white/2 p-3"
+                        >
+                          <p className="text-[10px] uppercase tracking-wider text-[#6B6B6B]">
+                            {item.label}
+                          </p>
+                          <p className="mt-1 font-mono text-lg font-bold text-[#F2F2F2]">
+                            {item.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </ChartCard>
+                );
+              }
+
+              return null;
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#080808] text-[#F2F2F2]">
@@ -144,345 +482,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ formId: st
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 lg:px-8">
-        {isLoading ? (
-          <div className="space-y-6">
-            {/* Metric skeleton */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-28 animate-shimmer rounded-2xl border border-white/[0.06] bg-gradient-to-r from-white/[0.02] via-white/[0.05] to-white/[0.02] bg-[length:200%_100%]"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                />
-              ))}
-            </div>
-            {/* Chart skeletons */}
-            <div className="grid gap-4 lg:grid-cols-2">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-64 animate-shimmer rounded-2xl border border-white/[0.06] bg-gradient-to-r from-white/[0.02] via-white/[0.05] to-white/[0.02] bg-[length:200%_100%]"
-                />
-              ))}
-            </div>
-          </div>
-        ) : !analytics || analytics.totalResponses === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-5 py-24 text-center">
-            <div className="flex size-16 items-center justify-center rounded-2xl border border-dashed border-[#E8854A]/30">
-              <BarChart3 className="size-6 text-[#3A3A3A]" />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-2xl font-semibold tracking-tight text-[#3A3A3A]">
-                No analytics data yet
-              </p>
-              <p className="text-xs text-[#6B6B6B]">
-                Charts and metrics will appear here once your form receives responses.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Metrics row */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <MetricCard
-                icon={CheckCircle2}
-                label="Total Responses"
-                value={analytics.totalResponses}
-                accent="#10B981"
-              />
-              <MetricCard
-                icon={Eye}
-                label="Total Views"
-                value={analytics.totalViews}
-                accent="#3B82F6"
-              />
-              <MetricCard
-                icon={MousePointerClick}
-                label="Started"
-                value={analytics.totalStarts}
-                accent="#F59E0B"
-              />
-              <MetricCard
-                icon={TrendingUp}
-                label="Completion Rate"
-                value={`${analytics.completionRate}%`}
-                accent="#7C3AED"
-              />
-            </div>
-
-            {/* Charts Grid */}
-            <div className="grid gap-4 lg:grid-cols-3">
-              {/* Response timeline */}
-              <div className="lg:col-span-2">
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-300 hover:border-white/[0.10] h-full flex flex-col justify-between min-h-[300px]">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6B6B6B]">
-                      Responses Over Time
-                    </h3>
-                    {/* Switcher pills */}
-                    <div className="flex gap-1 bg-white/2 p-0.5 rounded-lg border border-white/6">
-                      {(["7d", "30d", "all"] as const).map((r) => (
-                        <button
-                          key={r}
-                          onClick={() => setTimeRange(r)}
-                          className={cn(
-                            "px-2 py-0.5 text-[9px] font-mono uppercase rounded-md transition-all cursor-pointer",
-                            timeRange === r
-                              ? "bg-[#E8854A]/12 text-[#E8854A] border border-[#E8854A]/20"
-                              : "text-zinc-500 hover:text-zinc-300 border border-transparent"
-                          )}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      {timeRange === "7d" ? (
-                        <BarChart data={filteredTimelineData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
-                          <XAxis
-                            dataKey="date"
-                            stroke="#3A3A3A"
-                            tick={{ fill: "#6B6B6B", fontSize: 10 }}
-                            tickFormatter={(v: string) => {
-                              const d = new Date(v);
-                              return `${d.getMonth() + 1}/${d.getDate()}`;
-                            }}
-                          />
-                          <YAxis
-                            stroke="#3A3A3A"
-                            tick={{ fill: "#6B6B6B", fontSize: 10 }}
-                            allowDecimals={false}
-                          />
-                          <Tooltip
-                            content={({ active, payload, label }: any) => {
-                              if (!active || !payload?.length) return null;
-                              return (
-                                <div className="rounded-xl border border-white/[0.10] bg-[#1A1A1A] px-3 py-2 text-xs shadow-xl">
-                                  <p className="mb-1 font-medium text-[#F2F2F2]">{label}</p>
-                                  <p className="font-mono text-[#E8854A]">{payload[0]?.value} responses</p>
-                                </div>
-                              );
-                            }}
-                          />
-                          <Bar dataKey="count" fill="#E8854A" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      ) : (
-                        <AreaChart data={filteredTimelineData}>
-                          <defs>
-                            <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#E8854A" stopOpacity={0.3} />
-                              <stop offset="100%" stopColor="#E8854A" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
-                          <XAxis
-                            dataKey="date"
-                            stroke="#3A3A3A"
-                            tick={{ fill: "#6B6B6B", fontSize: 10 }}
-                            tickFormatter={(v: string) => {
-                              const d = new Date(v);
-                              return `${d.getMonth() + 1}/${d.getDate()}`;
-                            }}
-                          />
-                          <YAxis
-                            stroke="#3A3A3A"
-                            tick={{ fill: "#6B6B6B", fontSize: 10 }}
-                            allowDecimals={false}
-                          />
-                          <Tooltip
-                            content={({ active, payload, label }: any) => {
-                              if (!active || !payload?.length) return null;
-                              return (
-                                <div className="rounded-xl border border-white/[0.10] bg-[#1A1A1A] px-3 py-2 text-xs shadow-xl">
-                                  <p className="mb-1 font-medium text-[#F2F2F2]">{label}</p>
-                                  <p className="font-mono text-[#E8854A]">{payload[0]?.value} responses</p>
-                                </div>
-                              );
-                            }}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="count"
-                            stroke="#E8854A"
-                            strokeWidth={2}
-                            fill="url(#areaGradient)"
-                          />
-                        </AreaChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* Device breakdown */}
-              <div className="lg:col-span-1">
-                <ChartCard title="Device Breakdown">
-                  <div className="h-56 flex flex-col justify-between">
-                    <div className="h-40 relative">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={deviceData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={70}
-                            paddingAngle={3}
-                            dataKey="value"
-                            strokeWidth={0}
-                          >
-                            {deviceData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={DEVICE_COLORS[index % DEVICE_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      {/* Centered Total percentage */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider leading-none">Top device</span>
-                        <span className="text-sm font-bold text-white mt-1 leading-none">Desktop</span>
-                      </div>
-                    </div>
-                    {/* Legend */}
-                    <div className="flex justify-center gap-3 shrink-0">
-                      {deviceData.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-1">
-                          <div
-                            className="size-2 rounded-full shrink-0"
-                            style={{ background: DEVICE_COLORS[idx % DEVICE_COLORS.length] }}
-                          />
-                          <span className="text-[10px] text-zinc-400 font-mono">
-                            {item.name} ({item.value}%)
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </ChartCard>
-              </div>
-            </div>
-
-            {/* Per-field charts */}
-            {fields.length > 0 && (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {fields.map((field) => {
-                  const isPie =
-                    field.type === "single_choice" || field.type === "multiple_choice";
-                  const isRating = field.type === "rating";
-                  const isNumber = field.type === "number";
-
-                  if (isPie) {
-                    return (
-                      <ChartCard key={field.fieldId} title={field.label}>
-                        <div className="h-56">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={field.data}
-                                dataKey="value"
-                                nameKey="label"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={80}
-                                innerRadius={45}
-                                paddingAngle={2}
-                                strokeWidth={0}
-                              >
-                                {field.data.map((_: any, idx: number) => (
-                                  <Cell
-                                    key={idx}
-                                    fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                  />
-                                ))}
-                              </Pie>
-                              <Tooltip content={<CustomTooltip />} />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                        {/* Legend */}
-                        <div className="mt-2 flex flex-wrap gap-3">
-                          {field.data.map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center gap-1.5">
-                              <div
-                                className="size-2 rounded-full"
-                                style={{ background: CHART_COLORS[idx % CHART_COLORS.length] }}
-                              />
-                              <span className="text-[10px] text-[#6B6B6B]">
-                                {item.label} ({item.value})
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </ChartCard>
-                    );
-                  }
-
-                  if (isRating) {
-                    return (
-                      <ChartCard key={field.fieldId} title={field.label}>
-                        <div className="h-56">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={field.data}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
-                              <XAxis
-                                dataKey="label"
-                                stroke="#3A3A3A"
-                                tick={{ fill: "#6B6B6B", fontSize: 10 }}
-                              />
-                              <YAxis
-                                stroke="#3A3A3A"
-                                tick={{ fill: "#6B6B6B", fontSize: 10 }}
-                                allowDecimals={false}
-                              />
-                              <Tooltip content={<CustomTooltip />} />
-                              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                                {field.data.map((_: any, idx: number) => (
-                                  <Cell
-                                    key={idx}
-                                    fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                  />
-                                ))}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </ChartCard>
-                    );
-                  }
-
-                  if (isNumber) {
-                    return (
-                      <ChartCard key={field.fieldId} title={field.label}>
-                        <div className="grid grid-cols-2 gap-3">
-                          {field.data.map((item: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
-                            >
-                              <p className="text-[10px] uppercase tracking-wider text-[#6B6B6B]">
-                                {item.label}
-                              </p>
-                              <p className="mt-1 font-mono text-lg font-bold text-[#F2F2F2]">
-                                {item.value}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </ChartCard>
-                    );
-                  }
-
-                  return null;
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        {analyticsContent}
       </div>
     </div>
   );

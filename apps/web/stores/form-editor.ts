@@ -62,7 +62,8 @@ export const useFormEditorStore = create<FormEditorState>((set) => ({
 
   updateField: (id, patch) =>
     set((s) => {
-      const { [id]: _removed, ...remainingErrors } = s.fieldErrors;
+      const remainingErrors = { ...s.fieldErrors };
+      delete remainingErrors[id];
       return {
         fields: s.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)),
         dirty: true,
