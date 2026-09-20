@@ -36,13 +36,12 @@ export async function POST(req: Request) {
     const groqFormData = new FormData();
     groqFormData.append("file", file, "audio.webm");
     groqFormData.append("model", "whisper-large-v3");
-    groqFormData.append("language", "hi");
     groqFormData.append("response_format", "json");
     groqFormData.append("temperature", "0.0");
-    // Context prompt to help Whisper output in Roman script (Hinglish) instead of Devanagari/Urdu
+    // Prompt guides Whisper towards Roman script output for any language
     groqFormData.append(
       "prompt",
-      "Transcribe respondent voice answer accurately in natural spoken language, code-mixed Hinglish, Hindi, or English."
+      "Transcribe in Roman script. Example: mera naam Rahul hai, I am a volunteer, mujhe bhookh lagi hai, naan saptham class padikkireen."
     );
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
