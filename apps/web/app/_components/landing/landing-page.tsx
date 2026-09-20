@@ -1,16 +1,36 @@
 "use client";
 
 import { useEffect } from "react";
-import { FinalCta } from "./final-cta";
-import { LandingFaq } from "./faq";
-import { Hero } from "./hero";
-import { LandingFooter } from "./landing-footer";
+import dynamic from "next/dynamic";
 import { LandingNav } from "./landing-nav";
-import { Pricing } from "./pricing";
-import { ProductBento } from "./product-bento";
+import { Hero } from "./hero";
 import { StatsBar } from "./stats-bar";
-import { Testimonials } from "./testimonials";
-import { WedgeShowcase } from "./wedge-showcase";
+import { LandingFooter } from "./landing-footer";
+
+const ProductBento = dynamic(
+  () => import("./product-bento").then((mod) => mod.ProductBento),
+  { ssr: true }
+);
+const WedgeShowcase = dynamic(
+  () => import("./wedge-showcase").then((mod) => mod.WedgeShowcase),
+  { ssr: true }
+);
+const Pricing = dynamic(
+  () => import("./pricing").then((mod) => mod.Pricing),
+  { ssr: true }
+);
+const Testimonials = dynamic(
+  () => import("./testimonials").then((mod) => mod.Testimonials),
+  { ssr: true }
+);
+const LandingFaq = dynamic(
+  () => import("./faq").then((mod) => mod.LandingFaq),
+  { ssr: true }
+);
+const FinalCta = dynamic(
+  () => import("./final-cta").then((mod) => mod.FinalCta),
+  { ssr: true }
+);
 
 export function LandingPage() {
   useEffect(() => {
@@ -21,12 +41,12 @@ export function LandingPage() {
   }, []);
 
   return (
-    <main className="relative min-h-[100dvh] overflow-hidden bg-[#080808] text-[#F2F2F2]">
+    <main className="relative min-h-dvh overflow-hidden bg-[#080808] text-[#F2F2F2]">
       {/* Background Lighting Flares */}
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-0">
-        <div className="absolute left-1/2 top-[-18rem] h-[44rem] w-[44rem] -translate-x-1/2 rounded-full bg-[#E8854A] opacity-[0.12] blur-[160px]" />
-        <div className="absolute bottom-[-22rem] left-[8vw] h-[36rem] w-[36rem] rounded-full bg-[#174c4c] opacity-[0.12] blur-[170px]" />
-        <div className="absolute bottom-[10vh] right-[-18rem] h-[36rem] w-[36rem] rounded-full bg-[#E8854A] opacity-[0.06] blur-[170px]" />
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute left-1/2 -top-72 h-176 w-176 -translate-x-1/2 rounded-full bg-[#E8854A] opacity-[0.12] blur-[160px]" />
+        <div className="absolute -bottom-88 left-[8vw] h-144 w-xl rounded-full bg-[#174c4c] opacity-[0.12] blur-[170px]" />
+        <div className="absolute bottom-[10vh] -right-72 h-144 w-xl rounded-full bg-[#E8854A] opacity-[0.06] blur-[170px]" />
       </div>
       <div
         aria-hidden="true"

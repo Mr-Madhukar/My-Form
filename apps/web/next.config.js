@@ -8,6 +8,15 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../../"),
   allowedDevOrigins: ["10.59.51.3", "localhost", "127.0.0.1"],
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "@tabler/icons-react",
+      "motion",
+      "date-fns",
+      "posthog-js",
+    ],
+  },
   async headers() {
     return [
       {

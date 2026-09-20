@@ -78,7 +78,7 @@ function FaqItem({
             className={`flex size-6 items-center justify-center rounded-full border transition-colors duration-300 ${
               isOpen
                 ? "border-[#E8854A]/30 bg-[#E8854A]/10 text-[#E8854A]"
-                : "border-white/6 bg-white/2 text-zinc-500 group-hover:text-zinc-300"
+                : "border-white/6 bg-white/2 text-zinc-400 group-hover:text-zinc-200"
             }`}
           >
             <ChevronDown className="size-3.5" />
@@ -121,7 +121,7 @@ export function LandingFaq() {
             <h2 className="mt-3 text-3xl font-semibold tracking-tighter text-[#F2F2F2] sm:text-4xl">
               Frequently Asked Questions.
             </h2>
-            <p className="mt-3 text-sm text-[#6B6B6B] max-w-md mx-auto">
+            <p className="mt-3 text-sm text-zinc-400 max-w-md mx-auto">
               Everything you need to know about building, sharing, and optimizing My Form.
             </p>
           </div>

@@ -73,26 +73,26 @@ const plans = [
   },
 ];
 
+function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+}
+
 function PlanCard({
   plan,
   annual,
   index,
 }: {
-  plan: (typeof plans)[number];
-  annual: boolean;
-  index: number;
+  readonly plan: (typeof plans)[number];
+  readonly annual: boolean;
+  readonly index: number;
 }) {
   const price = annual ? plan.annualPrice : plan.monthlyPrice;
   const annualSaving =
     plan.monthlyPrice > 0
       ? Math.round(((plan.monthlyPrice - plan.annualPrice) / plan.monthlyPrice) * 100)
       : 0;
-
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  }
 
   return (
     <motion.div
@@ -130,12 +130,12 @@ function PlanCard({
       {/* Card body — flex-1 so all cards in a row stretch to the same height */}
       <div
         className={`relative flex flex-1 flex-col rounded-[1.4rem] border px-6 py-7 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] ${
-          plan.highlight ? "bg-[#0f0e0d] border-[#E8854A]/10" : "bg-[#111] border-white/[0.02]"
+          plan.highlight ? "bg-[#0f0e0d] border-[#E8854A]/10" : "bg-[#111] border-white/2"
         }`}
       >
         {/* Plan name */}
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#6B6B6B]">
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
             {plan.name}
           </span>
           {plan.highlight && <Zap className="size-3.5 text-[#E8854A]" />}
@@ -155,7 +155,7 @@ function PlanCard({
               {price === 0 ? "Free" : `$${price}`}
             </motion.span>
           </AnimatePresence>
-          {price > 0 && <span className="mb-0.5 text-xs text-[#6B6B6B]">/ mo</span>}
+          {price > 0 && <span className="mb-0.5 text-xs text-zinc-400">/ mo</span>}
           {annual && annualSaving > 0 && (
             <motion.span
               initial={{ opacity: 0, scale: 0.8 }}
@@ -170,13 +170,13 @@ function PlanCard({
         {/* Billing note — fixed height so description always starts at the same y */}
         <div className="mt-1 h-4">
           {annual && plan.monthlyPrice > 0 && (
-            <p className="font-mono text-[10px] text-[#6B6B6B]">
+            <p className="font-mono text-[10px] text-zinc-400">
               Billed annually · ${plan.annualPrice * 12}/yr
             </p>
           )}
         </div>
 
-        <p className="mt-3 text-[13px] leading-relaxed text-[#6B6B6B]">{plan.description}</p>
+        <p className="mt-3 text-[13px] leading-relaxed text-zinc-400">{plan.description}</p>
 
         {/* CTA */}
         <div className="mt-6">
@@ -190,17 +190,17 @@ function PlanCard({
         </div>
 
         {/* Divider */}
-        <div className="my-6 h-px bg-white/[0.04]" />
+        <div className="my-6 h-px bg-white/4" />
 
         {/* Features */}
         <ul className="flex flex-col gap-2.5">
           {plan.features.map((feature) => (
-            <li key={feature} className="flex items-start gap-2.5 text-[13px] text-[#8E8E93]">
+            <li key={feature} className="flex items-start gap-2.5 text-[13px] text-zinc-300">
               <span
                 className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full ${
                   plan.highlight
                     ? "bg-[#E8854A]/12 text-[#E8854A]"
-                    : "bg-white/[0.04] text-zinc-500"
+                    : "bg-white/4 text-zinc-400"
                 }`}
               >
                 <Check className="size-2.5" />
@@ -233,19 +233,19 @@ export function Pricing() {
             <h2 className="mt-3 text-3xl font-semibold tracking-tighter text-[#F2F2F2] sm:text-4xl">
               Simple, honest pricing.
             </h2>
-            <p className="mt-3 text-sm text-[#6B6B6B] max-w-sm mx-auto">
+            <p className="mt-3 text-sm text-zinc-400 max-w-sm mx-auto">
               Start free. Upgrade when your forms start doing serious work.
             </p>
 
             {/* Billing toggle */}
-            <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/[0.06] bg-white/[0.02] p-1 pr-3">
+            <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/6 bg-white/2 p-1 pr-3">
               <Button
                 type="button"
                 onClick={() => setAnnual(false)}
                 className={`rounded-full px-4 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-widest transition-all duration-300 ${
                   !annual
                     ? "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20"
-                    : "text-[#6B6B6B] hover:text-zinc-300"
+                    : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 Monthly
@@ -256,7 +256,7 @@ export function Pricing() {
                 className={`rounded-full px-4 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-widest transition-all duration-300 ${
                   annual
                     ? "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20"
-                    : "text-[#6B6B6B] hover:text-zinc-300"
+                    : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 Annually
@@ -287,7 +287,7 @@ export function Pricing() {
 
         {/* Footer note */}
         <ScrollReveal delay={0.3}>
-          <p className="mt-10 text-center font-mono text-[10px] text-[#6B6B6B]">
+          <p className="mt-10 text-center font-mono text-[10px] text-zinc-400">
             No credit card required · Cancel anytime · Free during beta
           </p>
         </ScrollReveal>

@@ -5,6 +5,12 @@ import { motion } from "motion/react";
 import { Sparkles, Check, TrendingDown } from "lucide-react";
 import { ScrollReveal } from "./scroll-reveal";
 
+function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+}
+
 export function WedgeShowcase() {
   const [step, setStep] = useState(0);
 
@@ -19,18 +25,12 @@ export function WedgeShowcase() {
     return () => clearInterval(timer);
   }, []);
 
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  }
-
   return (
     <section id="wedge" className="px-4 py-20 relative">
       {/* Absolute glow flare behind the comparison grid */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E8854A] opacity-[0.035] blur-[140px]"
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-144 w-xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E8854A] opacity-[0.035] blur-[140px]"
       />
 
       <div className="mx-auto max-w-6xl">
@@ -54,15 +54,15 @@ export function WedgeShowcase() {
         <div className="mx-auto max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
           {/* COLUMN A: Traditional Static Form (Legacy) */}
           <ScrollReveal delay={0.1} className="h-full">
-            <div className="group relative rounded-[2rem] bg-white/[0.01] p-1.5 ring-1 ring-white/[0.04] h-full flex flex-col justify-between">
+            <div className="group relative rounded-[2rem] bg-white/1 p-1.5 ring-1 ring-white/4 h-full flex flex-col justify-between">
               {/* Inner card */}
-              <div className="relative flex-grow rounded-[calc(2rem-6px)] bg-[#0d0d0d] border border-white/[0.01] p-6 flex flex-col justify-between min-h-[420px]">
+              <div className="relative grow rounded-[calc(2rem-6px)] bg-[#0d0d0d] border border-white/1 p-6 flex flex-col justify-between min-h-105">
                 <div>
-                  <div className="flex justify-between items-center border-b border-white/[0.04] pb-3 mb-6">
-                    <span className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider">
+                  <div className="flex justify-between items-center border-b border-white/4 pb-3 mb-6">
+                    <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">
                       Traditional Form
                     </span>
-                    <span className="font-mono text-[9px] text-zinc-600 bg-white/[0.02] px-2 py-0.5 rounded border border-white/[0.03]">
+                    <span className="font-mono text-[9px] text-zinc-400 bg-white/2 px-2 py-0.5 rounded border border-white/3">
                       Static
                     </span>
                   </div>
@@ -70,26 +70,26 @@ export function WedgeShowcase() {
                   {/* Form fields */}
                   <div className="space-y-4 text-left">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-zinc-500 uppercase">
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase">
                         1. Full Name
-                      </label>
-                      <div className="w-full rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2 text-xs text-zinc-400">
+                      </p>
+                      <div className="w-full rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-xs text-zinc-300">
                         Elena Vasquez
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-zinc-500 uppercase">
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase">
                         2. Cancellation Reason
-                      </label>
-                      <div className="w-full rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-xs text-white">
-                        "The dashboard loading speed is slow."
+                      </p>
+                      <div className="w-full rounded-lg border border-white/6 bg-white/2 px-3 py-2.5 text-xs text-white">
+                        &ldquo;The dashboard loading speed is slow.&rdquo;
                       </div>
                     </div>
-                    <div className="space-y-1 opacity-40">
-                      <label className="text-[10px] font-mono text-zinc-500 uppercase">
+                    <div className="space-y-1 opacity-50">
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase">
                         3. What was slow?
-                      </label>
-                      <div className="w-full rounded-lg border border-white/[0.04] bg-white/[0.01] px-3 py-2 text-xs text-zinc-600 italic">
+                      </p>
+                      <div className="w-full rounded-lg border border-white/4 bg-white/1 px-3 py-2 text-xs text-zinc-400 italic">
                         No field provided to ask context...
                       </div>
                     </div>
@@ -97,12 +97,12 @@ export function WedgeShowcase() {
                 </div>
 
                 {/* Bottom telemetry card */}
-                <div className="mt-8 border-t border-white/[0.04] pt-4 flex justify-between items-center">
-                  <div className="flex items-center gap-1.5 text-zinc-500 font-mono text-[10px]">
+                <div className="mt-8 border-t border-white/4 pt-4 flex justify-between items-center">
+                  <div className="flex items-center gap-1.5 text-zinc-400 font-mono text-[10px]">
                     <TrendingDown className="size-3.5 text-red-500/80" />
                     <span>Average Completion</span>
                   </div>
-                  <span className="font-mono text-sm font-semibold text-zinc-400">34%</span>
+                  <span className="font-mono text-sm font-semibold text-zinc-300">34%</span>
                 </div>
               </div>
             </div>
@@ -112,7 +112,7 @@ export function WedgeShowcase() {
           <ScrollReveal delay={0.2} className="h-full">
             <div
               onMouseMove={handleMouseMove}
-              className="group relative rounded-[2rem] bg-white/[0.02] p-1.5 ring-1 ring-white/[0.06] hover:ring-white/[0.12] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] h-full flex flex-col justify-between"
+              className="group relative rounded-[2rem] bg-white/2 p-1.5 ring-1 ring-white/6 hover:ring-white/12 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] h-full flex flex-col justify-between"
             >
               {/* Spotlight border overlay — radial gradient follows cursor */}
               <div
@@ -125,9 +125,9 @@ export function WedgeShowcase() {
               />
 
               {/* Inner card */}
-              <div className="relative flex-grow rounded-[calc(2rem-6px)] bg-[#111] shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] border border-white/[0.02] p-6 flex flex-col justify-between min-h-[420px]">
+              <div className="relative grow rounded-[calc(2rem-6px)] bg-[#111] shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] border border-white/2 p-6 flex flex-col justify-between min-h-105">
                 <div>
-                  <div className="flex justify-between items-center border-b border-white/[0.05] pb-3 mb-6">
+                  <div className="flex justify-between items-center border-b border-white/5 pb-3 mb-6">
                     <span className="font-mono text-[10px] text-[#E8854A] uppercase tracking-wider font-semibold">
                       My Form Workspace
                     </span>
@@ -144,7 +144,7 @@ export function WedgeShowcase() {
                       <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#E8854A]/12 text-[#E8854A] border border-[#E8854A]/15 font-mono text-[10px] font-semibold">
                         F
                       </div>
-                      <div className="rounded-2xl rounded-bl-sm border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5 text-zinc-300">
+                      <div className="rounded-2xl rounded-bl-sm border border-white/6 bg-white/2 px-3.5 py-2.5 text-zinc-300">
                         What is your primary product feedback?
                       </div>
                     </div>
@@ -157,7 +157,7 @@ export function WedgeShowcase() {
                         className="flex items-end gap-2.5 max-w-[85%] ml-auto justify-end"
                       >
                         <div className="rounded-2xl rounded-br-sm border border-[#E8854A]/25 bg-[#E8854A]/8 px-3.5 py-2.5 text-[#F2F2F2]">
-                          "The dashboard loading speed is slow."
+                          &ldquo;The dashboard loading speed is slow.&rdquo;
                         </div>
                       </motion.div>
                     )}
@@ -213,7 +213,7 @@ export function WedgeShowcase() {
                         className="flex items-end gap-2.5 max-w-[85%] ml-auto justify-end"
                       >
                         <div className="rounded-2xl rounded-br-sm border border-[#E8854A]/25 bg-[#E8854A]/8 px-3.5 py-2.5 text-[#F2F2F2]">
-                          "Mainly the database queries on reload."
+                          &ldquo;Mainly the database queries on reload.&rdquo;
                         </div>
                       </motion.div>
                     )}
@@ -221,7 +221,7 @@ export function WedgeShowcase() {
                 </div>
 
                 {/* Bottom telemetry card */}
-                <div className="mt-8 border-t border-white/[0.05] pt-4 flex justify-between items-center">
+                <div className="mt-8 border-t border-white/5 pt-4 flex justify-between items-center">
                   <div className="flex items-center gap-1.5 text-[#E8854A] font-mono text-[10px] font-semibold">
                     <Check className="size-3.5 text-[#E8854A]" />
                     <span>Average Completion</span>

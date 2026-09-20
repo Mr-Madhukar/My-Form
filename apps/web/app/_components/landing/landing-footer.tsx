@@ -14,20 +14,20 @@ export function LandingFooter() {
             height={22}
             className="object-contain opacity-60 logo-img"
           />
-          <p className="font-mono text-[11px] text-[#6B6B6B]">
+          <p className="font-mono text-[11px] text-zinc-400">
             &copy; {new Date().getFullYear()} My Form. All rights reserved.
           </p>
         </div>
         <div className="flex items-center gap-6">
           <Link
             href="/terms"
-            className="font-mono text-[11px] text-[#6B6B6B] transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-[#F2F2F2]"
+            className="font-mono text-[11px] text-zinc-400 transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-[#F2F2F2]"
           >
             Terms of Service
           </Link>
           <Link
             href="/privacy"
-            className="font-mono text-[11px] text-[#6B6B6B] transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-[#F2F2F2]"
+            className="font-mono text-[11px] text-zinc-400 transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:text-[#F2F2F2]"
           >
             Privacy Policy
           </Link>

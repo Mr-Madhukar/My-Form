@@ -28,17 +28,21 @@ const testimonials = [
   },
 ];
 
-function TestimonialCard({ testimonial }: { testimonial: (typeof testimonials)[number] }) {
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  }
+function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+}
 
+function TestimonialCard({
+  testimonial,
+}: {
+  readonly testimonial: (typeof testimonials)[number];
+}) {
   return (
     <div
       onMouseMove={handleMouseMove}
-      className="group relative cursor-default rounded-[1.75rem] bg-white/[0.02] p-1.5 ring-1 ring-white/[0.06] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:ring-white/[0.12] h-full"
+      className="group relative cursor-default rounded-[1.75rem] bg-white/2 p-1.5 ring-1 ring-white/6 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:ring-white/12 h-full"
     >
       {/* Spotlight border overlay — radial gradient follows cursor */}
       <div
@@ -51,13 +55,13 @@ function TestimonialCard({ testimonial }: { testimonial: (typeof testimonials)[n
       />
 
       {/* Inner card core */}
-      <div className="relative flex h-full flex-col justify-between rounded-[1.4rem] bg-[#111] p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] border border-white/[0.02]">
+      <div className="relative flex h-full flex-col justify-between rounded-[1.4rem] bg-[#111] p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] border border-white/2">
         <div>
           {/* Quote bubble & Star ratings */}
           <div className="mb-4 flex items-center justify-between">
             <div className="flex gap-0.5">
-              {[...Array(testimonial.stars)].map((_, i) => (
-                <Star key={i} className="size-3.5 fill-[#E8854A] text-[#E8854A]" />
+              {[1, 2, 3, 4, 5].slice(0, testimonial.stars).map((starNum) => (
+                <Star key={starNum} className="size-3.5 fill-[#E8854A] text-[#E8854A]" />
               ))}
             </div>
             {/* Quote indicator */}
@@ -75,7 +79,7 @@ function TestimonialCard({ testimonial }: { testimonial: (typeof testimonials)[n
           </p>
         </div>
 
-        <div className="mt-6 flex items-center justify-between border-t border-white/[0.06] pt-4">
+        <div className="mt-6 flex items-center justify-between border-t border-white/6 pt-4">
           <div className="flex items-center gap-3">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20">
               <span className="font-mono text-[11px] font-semibold">
@@ -90,7 +94,7 @@ function TestimonialCard({ testimonial }: { testimonial: (typeof testimonials)[n
                 <p className="text-sm font-medium text-[#F2F2F2]">{testimonial.name}</p>
                 <CheckCircle2 className="size-3 text-emerald-500 fill-emerald-500/10" />
               </div>
-              <p className="font-mono text-[10px] text-[#6B6B6B]">{testimonial.role}</p>
+              <p className="font-mono text-[10px] text-zinc-400">{testimonial.role}</p>
             </div>
           </div>
           <span className="font-mono text-[9px] text-[#E8854A] bg-[#E8854A]/8 px-2 py-0.5 rounded-full border border-[#E8854A]/15 font-medium">
@@ -117,7 +121,7 @@ export function Testimonials() {
             <h2 className="mt-3 text-3xl font-semibold tracking-tighter text-[#F2F2F2] sm:text-4xl">
               Loved by growth & product teams.
             </h2>
-            <p className="mt-3 text-sm text-[#6B6B6B] max-w-md mx-auto">
+            <p className="mt-3 text-sm text-zinc-400 max-w-md mx-auto">
               See how teams are unlocking massive response conversions and deep insights.
             </p>
           </div>
