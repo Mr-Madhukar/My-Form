@@ -9,15 +9,10 @@ import {
   ArrowUp,
   Check,
   Loader2,
-  Pencil,
   Star,
   Sparkles,
   Mail,
-  Lock,
-  Plus,
-  ChevronDown,
   Clock,
-  ExternalLink,
   FileText,
   Hash,
   Calendar,
@@ -30,10 +25,11 @@ import {
 import { buildResponseSchema, zodForField, evaluateFieldVisibility, type FieldType, type FormTheme, type FieldCondition } from "@repo/forms";
 import { trpc } from "~/trpc/client";
 import { cn } from "~/lib/utils";
-import { themeToCSSVars, hexToRgba } from "~/lib/theme";
+import { themeToCSSVars } from "~/lib/theme";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
+import { VoiceInputButton } from "./voice-input-button";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,6 +58,12 @@ type DebriefState =
   | { tag: "saving" }
   | { tag: "done" };
 
+type SavedProgress = {
+  step: number;
+  values: Record<string, unknown>;
+  fieldIds: string[];
+};
+
 type Props = {
   slug: string;
   title: string;
@@ -87,20 +89,6 @@ const TYPING_MS = 600;
 type ChoiceOption = { id: string; label: string };
 function optionsOf(f: Field): ChoiceOption[] {
   return (f.config.options as ChoiceOption[] | undefined) ?? [];
-}
-
-function formatAnswer(field: Field, value: unknown): string {
-  if (field.type === "single_choice")
-    return optionsOf(field).find((o) => o.id === value)?.label ?? "";
-  if (field.type === "multiple_choice") {
-    const ids = (value as string[] | undefined) ?? [];
-    return ids.map((id) => optionsOf(field).find((o) => o.id === id)?.label ?? id).join(", ");
-  }
-  if (field.type === "rating") {
-    const n = Number(value) || 0;
-    return (field.config.style as string) === "number" ? `${n}` : "★".repeat(n);
-  }
-  return value == null ? "" : String(value);
 }
 
 function isFollowupEligible(f: Field): boolean {
@@ -140,173 +128,11 @@ function prefersReducedMotion(): boolean {
   );
 }
 
-type SavedProgress = { step: number; values: Record<string, unknown>; fieldIds: string[] };
-
 // ---------------------------------------------------------------------------
 // UI atoms
 // ---------------------------------------------------------------------------
 
-function Avatar({ initial }: { initial: string }) {
-  return (
-    <div className="mt-0.5 flex size-7 shrink-0 select-none items-center justify-center rounded-full bg-(--form-accent) text-[13px] font-semibold text-(--form-text-on-accent)">
-      {initial}
-    </div>
-  );
-}
-
-function AiAvatar() {
-  return (
-    <div className="mt-0.5 flex size-7 shrink-0 select-none items-center justify-center rounded-full border border-white/8 bg-[color-mix(in_srgb,var(--form-ai-accent)_18%,var(--form-avatar-bg))]">
-      <Sparkles className="size-3.5 text-(--form-ai-accent)" />
-    </div>
-  );
-}
-
-function TypingDots({ color = "var(--form-text-muted)" }: { color?: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      {[0, 150, 300].map((d) => (
-        <span
-          key={d}
-          className="size-1.5 rounded-full animate-typing-bounce"
-          style={{ background: color, animationDelay: `${d}ms` }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function QuestionBubble({
-  field,
-  initial,
-  faded,
-}: {
-  field: Field;
-  initial: string;
-  faded: boolean;
-}) {
-  return (
-    <div className={cn("flex items-end gap-2.5 animate-bubble-in-left", faded && "opacity-60")}>
-      <Avatar initial={initial} />
-      <div className="max-w-[80%] rounded-2xl rounded-bl-sm border border-white/7 bg-(--form-surface) px-4 py-3 text-[15px] leading-relaxed text-(--form-text-primary)">
-        {field.label}
-        {field.required && <span className="ml-1 text-(--form-accent)">*</span>}
-      </div>
-    </div>
-  );
-}
-
-function AnswerBubble({
-  text,
-  faded,
-  onEdit,
-}: {
-  text: string;
-  faded: boolean;
-  onEdit?: () => void;
-}) {
-  if (!onEdit) {
-    return (
-      <div className={cn("flex justify-end animate-bubble-in-right", faded && "opacity-60")}>
-        <div className="max-w-[80%] whitespace-pre-wrap wrap-break-word rounded-2xl rounded-br-sm bg-(--form-accent) px-4 py-3 text-[15px] leading-relaxed text-(--form-text-on-accent)">
-          {text || "—"}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div
-      className={cn(
-        "group flex items-center justify-end gap-2 animate-bubble-in-right",
-        faded && "opacity-60",
-      )}
-    >
-      <Pencil className="size-3 shrink-0 text-(--form-text-muted) opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100" />
-      <button
-        type="button"
-        onClick={onEdit}
-        title="Edit answer"
-        aria-label="Edit this answer"
-        className="max-w-[80%] cursor-pointer whitespace-pre-wrap wrap-break-word rounded-2xl rounded-br-sm bg-(--form-accent) px-4 py-3 text-left text-[15px] leading-relaxed text-(--form-text-on-accent) transition-opacity hover:opacity-85"
-      >
-        {text || "—"}
-      </button>
-    </div>
-  );
-}
-
-function AiFollowUpBubble({ text, streaming = false }: { text: string; streaming?: boolean }) {
-  return (
-    <div className="flex animate-bubble-in-left items-end gap-2.5">
-      <AiAvatar />
-      <div className="max-w-[80%] rounded-2xl rounded-bl-sm border border-[color-mix(in_srgb,var(--form-ai-accent)_25%,transparent)] bg-(--form-surface) px-4 py-3">
-        <span className="mb-1.5 flex items-center gap-1.5">
-          <Sparkles className="size-3 text-(--form-ai-accent)" />
-          <span className="font-mono text-[10px] uppercase tracking-widest text-(--form-ai-accent)">AI</span>
-        </span>
-        <p aria-live="polite" className="text-[15px] leading-relaxed text-(--form-text-primary)">
-          {text}
-          {streaming && (
-            <span className="ml-0.5 inline-block size-0.75 animate-pulse rounded-full bg-(--form-ai-accent) align-middle" />
-          )}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function AiFollowUpAnswer({
-  text,
-  skipped,
-  faded,
-}: {
-  text: string | null;
-  skipped?: boolean;
-  faded?: boolean;
-}) {
-  if (skipped) {
-    return (
-      <div className={cn("flex justify-end animate-bubble-in-right", faded && "opacity-60")}>
-        <span className="rounded-full border border-white/7 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-[#3A3A3A]">
-          Skipped
-        </span>
-      </div>
-    );
-  }
-  return (
-    <div className={cn("flex justify-end animate-bubble-in-right", faded && "opacity-60")}>
-      <div className="max-w-[80%] whitespace-pre-wrap wrap-break-word rounded-2xl rounded-br-sm bg-(--form-accent) px-4 py-3 text-[15px] leading-relaxed text-(--form-text-on-accent)">
-        {text}
-      </div>
-    </div>
-  );
-}
-
-function SuccessState() {
-  return (
-    <div className="flex animate-bubble-in-left items-end gap-2.5">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-(--form-accent)">
-        <Check className="size-4 text-(--form-text-on-accent)" />
-      </div>
-      <div className="rounded-2xl rounded-bl-sm border border-white/7 bg-(--form-surface) px-4 py-3 text-[15px] leading-relaxed text-(--form-text-primary)">
-        Thanks — we got it.
-      </div>
-    </div>
-  );
-}
-
-function AllDoneState() {
-  return (
-    <div className="flex animate-bubble-in-left items-end gap-2.5">
-      <AiAvatar />
-      <div className="rounded-2xl rounded-bl-sm border border-white/7 bg-(--form-surface) px-4 py-3 text-[15px] leading-relaxed text-(--form-text-primary)">
-        That&apos;s all — thank you for sharing!
-      </div>
-    </div>
-  );
-}
-
-function DoneActions({ slug, onReset }: { slug: string; onReset: () => void }) {
+function DoneActions({ onReset }: { readonly onReset: () => void }) {
   return (
     <div className="mt-2 flex animate-fade-up flex-col items-center gap-5 rounded-2xl border border-white/7 bg-(--form-surface) px-6 py-8 text-center">
       <p className="text-sm leading-relaxed text-(--form-text-muted)">
@@ -317,23 +143,19 @@ function DoneActions({ slug, onReset }: { slug: string; onReset: () => void }) {
           type="button"
           variant="outline"
           onClick={onReset}
-          className="cursor-pointer rounded-full px-4 py-2 text-sm"
+          className="cursor-pointer rounded-full px-4 py-2 text-xs"
         >
           Submit another response
         </Button>
         <Link
-          href={`/signup?utm_source=public_form&utm_medium=referral&utm_content=${encodeURIComponent(slug)}`}
-          className="rounded-full bg-(--form-accent) px-4 py-2 text-sm font-medium text-(--form-text-on-accent) transition-opacity hover:opacity-90"
+          href="https://my-form.mrmadhukar.in"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-(--form-text-muted) transition-colors hover:text-(--form-text-primary)"
         >
-          Create your own form
+          Powered by <span className="font-semibold">My Form</span>
         </Link>
       </div>
-      <Link
-        href="/"
-        className="font-mono text-[10px] uppercase tracking-widest text-(--form-text-muted) transition-colors hover:text-(--form-text-primary)"
-      >
-        Powered by My Form
-      </Link>
     </div>
   );
 }
@@ -342,7 +164,7 @@ function DoneActions({ slug, onReset }: { slug: string; onReset: () => void }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function FormRunner({ slug, title, description, theme, fields }: Props) {
+export function FormRunner({ slug, title, description, theme, fields }: Readonly<Props>) {
   const cssVars = useMemo(() => themeToCSSVars(theme), [theme]);
   const accent = cssVars["--form-accent"] ?? "#E8854A";
   const ordered = useMemo(() => [...fields].sort((a, b) => a.order - b.order), [fields]);
@@ -355,7 +177,6 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [responseId, setResponseId] = useState<string | null>(null);
-  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [channel, setChannel] = useState<"welcome" | "submit-response">("welcome");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Bumped on "Submit another response" so the typing-indicator effect refires even at step 0
@@ -610,7 +431,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
     const valid =
       Array.isArray(saved.fieldIds) &&
       saved.fieldIds.length === ids.length &&
-      saved.fieldIds.every((id, i) => id === ids[i]) &&
+      saved.fieldIds.every((id: string, i: number) => id === ids[i]) &&
       typeof saved.step === "number" &&
       saved.step > 0 &&
       saved.values !== null &&
@@ -669,45 +490,10 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
     }
   }
 
-  // Edit a previously answered question (pre-submit only)
-  const editingField = editingFieldId
-    ? (ordered.find((f) => f.id === editingFieldId) ?? null)
-    : null;
-
-  function handleEditSubmit(rawValue: unknown) {
-    if (!editingField) return;
-    setFieldError(null);
-
-    const checked = coerceAndValidate(editingField, rawValue);
-    if (!checked.ok) {
-      setFieldError(checked.error);
-      return;
-    }
-
-    form.setValue(editingField.id, checked.value === undefined ? "" : checked.value);
-    persistProgress(step);
-
-    if (typeof rawValue === "string" && rawValue.trim()) {
-      // Re-run the follow-up against the new answer
-      prefetchFollowup(editingField, rawValue.trim());
-    } else if (isFollowupEligible(editingField)) {
-      // Answer cleared — drop any stale follow-up for it
-      abortControllers.current.get(editingField.id)?.abort();
-      setAiFollowups((prev) => {
-        const m = new Map(prev);
-        m.delete(editingField.id);
-        return m;
-      });
-    }
-
-    setEditingFieldId(null);
-  }
-
   // ---------------------------------------------------------------------------
   // Submit form
   // ---------------------------------------------------------------------------
   async function finalize() {
-    setBannerError(null);
     const values = form.getValues();
     try {
       const { id } = await submitMutation.mutateAsync({
@@ -717,7 +503,6 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
       });
       setResponseId(id);
       setSubmitted(true);
-      setEditingFieldId(null);
       try {
         sessionStorage.removeItem(storageKey);
       } catch {
@@ -826,7 +611,6 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
     setBannerError(null);
     setSubmitted(false);
     setResponseId(null);
-    setEditingFieldId(null);
     setAiFollowups(new Map());
     setDebrief({ tag: "idle" });
     setDebriefAnswers(new Map());
@@ -837,9 +621,6 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
   // ---------------------------------------------------------------------------
   // Computed UI flags
   // ---------------------------------------------------------------------------
-  const progressPct = submitted ? 100 : total === 0 ? 100 : (step / total) * 100;
-  const counter = `${String(submitted ? total : step + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
-
   const currentDebriefField =
     debrief.tag === "active" ? (eligibleFollowupFields[debrief.index] ?? null) : null;
   const currentDebriefFollowup = currentDebriefField
@@ -847,7 +628,6 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
     : null;
   const waitingOnAi = currentDebriefFollowup?.streaming ?? false;
 
-  const showFormFooter = !submitted && (!!current || !!editingField);
   const showDebriefFooter = debrief.tag === "active" && !!currentDebriefField && !waitingOnAi;
   const remainingFollowups =
     debrief.tag === "active" ? eligibleFollowupFields.length - debrief.index : 0;
@@ -858,16 +638,16 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-[#313338] text-[#dbdee1] font-sans" style={cssVars}>
       {/* 1. Leftmost icon rail (Discord style) */}
-      <div className="hidden sm:flex flex-col items-center py-3 w-[72px] bg-[#1e1f22] shrink-0 gap-2">
+      <div className="hidden sm:flex flex-col items-center py-3 w-18 bg-[#1e1f22] shrink-0 gap-2">
         {/* Guild icon (Form Icon) */}
-        <div className="relative group flex items-center justify-center size-12 rounded-3xl hover:rounded-2xl bg-[#313338] text-[var(--form-accent)] hover:bg-[var(--form-accent)] hover:text-black transition-all duration-300 cursor-pointer font-bold text-lg shadow-lg">
+        <div className="relative group flex items-center justify-center size-12 rounded-3xl hover:rounded-2xl bg-[#313338] text-(--form-accent) hover:bg-(--form-accent) hover:text-black transition-all duration-300 cursor-pointer font-bold text-lg shadow-lg">
           {initial}
           {/* Active indicator pill */}
           <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-2 h-5 bg-white rounded-r-md scale-y-0 group-hover:scale-y-100 transition-all duration-300" />
         </div>
         
         {/* Separator line */}
-        <div className="w-8 h-[2px] bg-zinc-800 rounded my-1" />
+        <div className="w-8 h-0.5 bg-zinc-800 rounded my-1" />
         
         {/* Help icon */}
         <Link href="/help" className="flex items-center justify-center size-12 rounded-3xl hover:rounded-2xl bg-[#313338] text-zinc-400 hover:bg-[#23a55a] hover:text-white transition-all duration-300 cursor-pointer">
@@ -877,7 +657,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
 
       {/* 2. Channels list sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-30 flex flex-col w-[240px] bg-[#2b2d31] border-r border-[#1e1f22] shrink-0 transition-transform duration-300 sm:relative sm:translate-x-0",
+        "fixed inset-y-0 left-0 z-30 flex flex-col w-60 bg-[#2b2d31] border-r border-[#1e1f22] shrink-0 transition-transform duration-300 sm:relative sm:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
       )}>
         {/* Channel Header (Server Name) */}
@@ -903,12 +683,12 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
                     : "text-[#949ba4] hover:bg-[#35373c]/40 hover:text-[#dbdee1]"
                 )}
               >
-                <span className="text-zinc-500 font-semibold text-base">#</span>
-                welcome
+                <span className="text-zinc-500 font-semibold text-base">#</span><span>welcome</span>
               </button>
 
               <button
                 onClick={() => {
+                  if (submitted) return;
                   setChannel("submit-response");
                   setSidebarOpen(false);
                 }}
@@ -919,17 +699,16 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
                     : "text-[#949ba4] hover:bg-[#35373c]/40 hover:text-[#dbdee1]"
                 )}
               >
-                <span className="text-zinc-500 font-semibold text-base">#</span>
-                submit-response
+                <span className="text-zinc-500 font-semibold text-base">#</span><span>submit-response</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* User profile section at bottom of sidebar */}
-        <div className="h-[52px] bg-[#232428] flex items-center px-3 justify-between">
+        <div className="h-13 bg-[#232428] flex items-center px-3 justify-between">
           <div className="flex items-center gap-2">
-            <div className="size-8 rounded-full bg-[var(--form-accent)] flex items-center justify-center font-bold text-black text-xs">
+            <div className="size-8 rounded-full bg-(--form-accent) flex items-center justify-center font-bold text-black text-xs">
               U
             </div>
             <div className="flex flex-col min-w-0">
@@ -942,9 +721,11 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
 
       {/* Overlay for mobile sidebar */}
       {sidebarOpen && (
-        <div 
+        <button
+          type="button"
+          aria-label="Close sidebar overlay"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-20 bg-black/60 sm:hidden"
+          className="fixed inset-0 z-20 bg-black/60 sm:hidden border-none cursor-pointer"
         />
       )}
 
@@ -964,7 +745,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
             </button>
             <span className="text-zinc-500 font-semibold text-lg shrink-0">#</span>
             <span className="font-bold text-white text-sm shrink-0">{channel}</span>
-            <div className="hidden sm:block w-[1px] h-4 bg-[#232428] mx-2" />
+            <div className="hidden sm:block w-px h-4 bg-[#232428] mx-2" />
             <span className="hidden sm:inline text-xs text-[#949ba4] truncate">{description || "Fill out the form below."}</span>
           </div>
         </header>
@@ -975,7 +756,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
             /* Welcome view */
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto space-y-6">
               <div className="size-20 rounded-full bg-[#1e1f22] flex items-center justify-center shadow-lg border border-zinc-800">
-                <span className="text-3xl font-extrabold text-[var(--form-accent)]">{initial}</span>
+                <span className="text-3xl font-extrabold text-(--form-accent)">{initial}</span>
               </div>
               <div className="space-y-2">
                 <h2 className="text-3xl font-extrabold text-white tracking-tight">{title}</h2>
@@ -983,7 +764,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
               </div>
               <Button
                 onClick={() => setChannel("submit-response")}
-                className="px-6 py-2.5 rounded-xl font-semibold bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_95%,#000)] text-[#0a0a0a] transition-all cursor-pointer shadow-md"
+                className="px-6 py-2.5 rounded-xl font-semibold bg-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_95%,#000)] text-[#0a0a0a] transition-all cursor-pointer shadow-md"
               >
                 Get Started
                 <ArrowRight className="size-4 ml-1.5" />
@@ -995,7 +776,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
               {!submitted ? (
                 /* Question slider */
                 <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-xl mx-auto w-full">
-                  <div className="w-full bg-[#2b2d31]/40 border border-white/[0.03] rounded-2xl p-8 shadow-xl space-y-6 flex flex-col justify-between min-h-[300px]">
+                  <div className="w-full bg-[#2b2d31]/40 border border-white/3 rounded-2xl p-8 shadow-xl space-y-6 flex flex-col justify-between min-h-75">
                     <div className="space-y-4">
                       {/* Form title watermark */}
                       <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#949ba4] block leading-none">
@@ -1007,13 +788,13 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
                         <div className="space-y-4">
                           <h3 className="text-xl font-bold text-white tracking-tight leading-snug">
                             {current.label}
-                            {current.required && <span className="text-[var(--form-accent)] ml-1">*</span>}
+                            {current.required && <span className="text-(--form-accent) ml-1">*</span>}
                           </h3>
 
                           {/* Error banner */}
-                          {fieldError && (
+                          {(fieldError || bannerError) && (
                             <p role="alert" className="text-xs font-semibold text-red-400">
-                              {fieldError}
+                              {fieldError || bannerError}
                             </p>
                           )}
 
@@ -1036,7 +817,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
                     </div>
 
                     {/* Footer / navigation */}
-                    <div className="flex items-center justify-between pt-4 border-t border-white/[0.04] mt-auto">
+                    <div className="flex items-center justify-between pt-4 border-t border-white/4 mt-auto">
                       <div className="flex items-center gap-1.5">
                         {step > 0 && (
                           <Button
@@ -1066,7 +847,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
                     {/* Bot initial success message */}
                     <div className="flex items-start gap-4">
                       <div className="size-10 rounded-full bg-[#1e1f22] flex items-center justify-center shrink-0 border border-zinc-800">
-                        <span className="text-sm font-extrabold text-[var(--form-accent)]">{initial}</span>
+                        <span className="text-sm font-extrabold text-(--form-accent)">{initial}</span>
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -1120,7 +901,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
                           {/* User reply message */}
                           {isPastDebrief && (
                             <div className="flex items-start gap-4">
-                              <div className="size-10 rounded-full bg-[var(--form-accent)] flex items-center justify-center shrink-0 font-bold text-black text-xs">
+                              <div className="size-10 rounded-full bg-(--form-accent) flex items-center justify-center shrink-0 font-bold text-black text-xs">
                                 U
                               </div>
                               <div className="space-y-1">
@@ -1128,8 +909,8 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
                                   <span className="font-bold text-white text-sm">Respondent</span>
                                   <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
                                 </div>
-                                <div className="text-zinc-200 text-sm leading-relaxed italic bg-white/[0.02] border border-white/5 px-3 py-2 rounded-xl">
-                                  {userAnswer === null ? "Skipped follow-up." : userAnswer}
+                                <div className="text-zinc-200 text-sm leading-relaxed italic bg-white/2 border border-white/5 px-3 py-2 rounded-xl">
+                                  {userAnswer ?? "Skipped follow-up."}
                                 </div>
                               </div>
                             </div>
@@ -1140,8 +921,8 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
 
                     {/* Finished state & Done actions */}
                     {debrief.tag === "done" && (
-                      <div className="pt-6 border-t border-white/[0.04] max-w-md mx-auto">
-                        <DoneActions slug={slug} onReset={resetAll} />
+                      <div className="pt-6 border-t border-white/4 max-w-md mx-auto">
+                        <DoneActions onReset={resetAll} />
                       </div>
                     )}
 
@@ -1174,7 +955,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
                   {debrief.tag === "active" && waitingOnAi && (
                     <div className="p-4 bg-[#2b2d31] border-t border-[#1e1f22] flex items-center justify-between text-xs text-zinc-400">
                       <div className="flex items-center gap-2">
-                        <Loader2 className="size-4 animate-spin text-[var(--form-accent)]" />
+                        <Loader2 className="size-4 animate-spin text-(--form-accent)" />
                         AI is typing...
                       </div>
                       <Button onClick={() => void handleDebriefAnswer(currentDebriefField!.id, null)} className="h-8 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 cursor-pointer">
@@ -1208,16 +989,18 @@ export function FormRunner({ slug, title, description, theme, fields }: Props) {
 // ---------------------------------------------------------------------------
 
 type ReplyAreaProps = {
-  field: Field;
-  disabled: boolean;
-  pending: boolean;
-  initialValue?: unknown;
-  onSubmit: (value: unknown) => void;
+  readonly field: Field;
+  readonly disabled: boolean;
+  readonly pending: boolean;
+  readonly initialValue?: unknown;
+  readonly onSubmit: (value: unknown) => void;
 };
 
 function ReplyArea({ field, disabled, pending, initialValue, onSubmit }: ReplyAreaProps) {
   const initialText =
-    initialValue == null || initialValue === "" ? "" : String(initialValue);
+    typeof initialValue === "string" || typeof initialValue === "number"
+      ? String(initialValue)
+      : "";
   switch (field.type) {
     case "long_text":
       return (
@@ -1312,9 +1095,9 @@ function FollowupReplyArea({
   onSkip,
   pending,
 }: {
-  onSubmit: (a: string) => void;
-  onSkip: () => void;
-  pending: boolean;
+  readonly onSubmit: (a: string) => void;
+  readonly onSkip: () => void;
+  readonly pending: boolean;
 }) {
   const [value, setValue] = useState("");
   return (
@@ -1341,6 +1124,12 @@ function FollowupReplyArea({
         disabled={pending}
         className="max-h-32 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border border-white/8 bg-(--form-surface) px-4 py-2.5 text-[15px] leading-relaxed text-(--form-text-primary) outline-none transition-colors field-sizing-content placeholder:text-(--form-text-muted) focus:border-[color-mix(in_srgb,var(--form-accent)_50%,transparent)] disabled:opacity-50"
       />
+      <VoiceInputButton
+        disabled={pending}
+        size="sm"
+        onTranscript={(text) => setValue(text)}
+        onInterim={(interim) => setValue(interim)}
+      />
       <Button
         type="button"
         onClick={onSkip}
@@ -1361,27 +1150,6 @@ function FollowupReplyArea({
   );
 }
 
-function SendButton({
-  disabled,
-  pending,
-  label = "Send",
-}: {
-  disabled: boolean;
-  pending?: boolean;
-  label?: string;
-}) {
-  return (
-    <Button
-      type="submit"
-      disabled={disabled}
-      aria-label={label}
-      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--form-accent) text-(--form-text-on-accent) transition-all hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,transparent)] disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {pending ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
-    </Button>
-  );
-}
-
 function TextReply({
   field,
   inputType,
@@ -1389,11 +1157,11 @@ function TextReply({
   initialValue = "",
   onSubmit,
 }: {
-  field: Field;
-  inputType: string;
-  disabled: boolean;
-  initialValue?: string;
-  onSubmit: (v: unknown) => void;
+  readonly field: Field;
+  readonly inputType: string;
+  readonly disabled: boolean;
+  readonly initialValue?: string;
+  readonly onSubmit: (v: unknown) => void;
 }) {
   const [value, setValue] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1436,20 +1204,27 @@ function TextReply({
           disabled={disabled}
           autoComplete="off"
           aria-required={field.required}
-          className="w-full bg-[#1e1f22] border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[var(--form-accent)] focus:ring-1 focus:ring-[var(--form-accent)]/20 transition-all scheme-dark"
+          className="w-full bg-[#1e1f22] border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-(--form-accent) focus:ring-1 focus:ring-(--form-accent)/20 transition-all scheme-dark"
         />
         <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
           <Icon className="size-4 text-zinc-500" />
         </div>
       </div>
-      <div className="flex items-center justify-start">
+      <div className="flex items-center justify-between">
         <Button
           type="submit"
           disabled={disabled || (field.required && !value.trim())}
-          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+          className="px-5 py-2 h-9 rounded-lg bg-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
         >
           Next
         </Button>
+        {inputType === "text" && (
+          <VoiceInputButton
+            disabled={disabled}
+            onTranscript={(text) => setValue(text)}
+            onInterim={(interim) => setValue(interim)}
+          />
+        )}
       </div>
     </form>
   );
@@ -1460,9 +1235,9 @@ function FileUploadReply({
   disabled,
   onSubmit,
 }: {
-  field: Field;
-  disabled: boolean;
-  onSubmit: (v: unknown) => void;
+  readonly field: Field;
+  readonly disabled: boolean;
+  readonly onSubmit: (v: unknown) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -1552,7 +1327,7 @@ function FileUploadReply({
         <label
           htmlFor={`file-input-${field.id}`}
           className={cn(
-            "flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl p-8 bg-[#1e1f22] cursor-pointer hover:border-[var(--form-accent)]/40 hover:bg-white/[0.01] transition-all",
+            "flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl p-8 bg-[#1e1f22] cursor-pointer hover:border-(--form-accent)/40 hover:bg-white/1 transition-all",
             (disabled || uploading) && "pointer-events-none opacity-40"
           )}
         >
@@ -1568,7 +1343,7 @@ function FileUploadReply({
             {(uploading || progress > 0) && (
               <div className="w-full bg-white/5 rounded-full h-1.5 mt-2 overflow-hidden">
                 <div
-                  className="bg-[var(--form-accent)] h-1.5 rounded-full transition-all duration-150"
+                  className="bg-(--form-accent) h-1.5 rounded-full transition-all duration-150"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -1600,7 +1375,7 @@ function FileUploadReply({
             }
           }}
           disabled={disabled || uploading || !fileUrl || (field.required && !fileUrl)}
-          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+          className="px-5 py-2 h-9 rounded-lg bg-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
         >
           Next
         </Button>
@@ -1615,10 +1390,10 @@ function LongTextReply({
   initialValue = "",
   onSubmit,
 }: {
-  field: Field;
-  disabled: boolean;
-  initialValue?: string;
-  onSubmit: (v: unknown) => void;
+  readonly field: Field;
+  readonly disabled: boolean;
+  readonly initialValue?: string;
+  readonly onSubmit: (v: unknown) => void;
 }) {
   const [value, setValue] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1656,16 +1431,21 @@ function LongTextReply({
         rows={3}
         disabled={disabled}
         aria-required={field.required}
-        className="w-full bg-[#1e1f22] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[var(--form-accent)] focus:ring-1 focus:ring-[var(--form-accent)]/20 transition-all resize-none overflow-y-auto"
+        className="w-full bg-[#1e1f22] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-(--form-accent) focus:ring-1 focus:ring-(--form-accent)/20 transition-all resize-none overflow-y-auto"
       />
-      <div className="flex items-center justify-start">
+      <div className="flex items-center justify-between">
         <Button
           type="submit"
           disabled={disabled || (field.required && !value.trim())}
-          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+          className="px-5 py-2 h-9 rounded-lg bg-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
         >
           Next
         </Button>
+        <VoiceInputButton
+          disabled={disabled}
+          onTranscript={(text) => setValue((prev) => (prev ? `${prev} ${text}` : text))}
+          onInterim={(interim) => setValue((prev) => (prev ? `${prev} ${interim}` : interim))}
+        />
       </div>
     </form>
   );
@@ -1676,24 +1456,25 @@ function SingleChoiceReply({
   disabled,
   onSubmit,
 }: {
-  field: Field;
-  disabled: boolean;
-  onSubmit: (v: unknown) => void;
+  readonly field: Field;
+  readonly disabled: boolean;
+  readonly onSubmit: (v: unknown) => void;
 }) {
   return (
-    <div role="group" aria-label={field.label} className="flex flex-col gap-2 w-full">
+    <fieldset className="flex flex-col gap-2 w-full border-0 p-0 m-0">
+      <legend className="sr-only">{field.label}</legend>
       {optionsOf(field).map((opt) => (
         <button
           type="button"
           key={opt.id}
           disabled={disabled}
           onClick={() => onSubmit(opt.id)}
-          className="w-full text-left p-3 rounded-xl border border-white/5 bg-[#1e1f22] text-zinc-355 hover:border-[var(--form-accent)] hover:bg-white/5 transition-all text-xs font-medium cursor-pointer disabled:opacity-40"
+          className="w-full text-left p-3 rounded-xl border border-white/5 bg-[#1e1f22] text-zinc-300 hover:border-(--form-accent) hover:bg-white/5 transition-all text-xs font-medium cursor-pointer disabled:opacity-40"
         >
           {opt.label}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
 }
 
@@ -1704,11 +1485,11 @@ function MultipleChoiceReply({
   initialValue,
   onSubmit,
 }: {
-  field: Field;
-  disabled: boolean;
-  pending: boolean;
-  initialValue?: string[];
-  onSubmit: (v: unknown) => void;
+  readonly field: Field;
+  readonly disabled: boolean;
+  readonly pending: boolean;
+  readonly initialValue?: string[];
+  readonly onSubmit: (v: unknown) => void;
 }) {
   const [selected, setSelected] = useState<string[]>(initialValue ?? []);
   function toggle(id: string) {
@@ -1722,7 +1503,8 @@ function MultipleChoiceReply({
         onSubmit(selected);
       }}
     >
-      <div role="group" aria-label={field.label} className="flex flex-col gap-2 w-full">
+      <fieldset className="flex flex-col gap-2 w-full border-0 p-0 m-0">
+        <legend className="sr-only">{field.label}</legend>
         {optionsOf(field).map((opt) => {
           const on = selected.includes(opt.id);
           return (
@@ -1734,21 +1516,21 @@ function MultipleChoiceReply({
               className={cn(
                 "w-full text-left p-3 rounded-xl border text-xs font-medium transition-all cursor-pointer disabled:opacity-40 flex items-center justify-between",
                 on
-                  ? "border-[var(--form-accent)] bg-[var(--form-accent)]/10 text-white"
-                  : "border-white/5 bg-[#1e1f22] text-[#dbdee1] hover:border-[var(--form-accent)] hover:bg-white/5"
+                  ? "border-(--form-accent) bg-(--form-accent)/10 text-white"
+                  : "border-white/5 bg-[#1e1f22] text-[#dbdee1] hover:border-(--form-accent) hover:bg-white/5"
               )}
             >
               <span>{opt.label}</span>
-              {on && <Check className="size-3.5 text-[var(--form-accent)]" />}
+              {on && <Check className="size-3.5 text-(--form-accent)" />}
             </button>
           );
         })}
-      </div>
+      </fieldset>
       <div>
         <Button
           type="submit"
           disabled={disabled || (field.required && selected.length === 0)}
-          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+          className="px-5 py-2 h-9 rounded-lg bg-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
         >
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : "Next"}
         </Button>
@@ -1762,9 +1544,9 @@ function RatingReply({
   disabled,
   onSubmit,
 }: {
-  field: Field;
-  disabled: boolean;
-  onSubmit: (v: unknown) => void;
+  readonly field: Field;
+  readonly disabled: boolean;
+  readonly onSubmit: (v: unknown) => void;
 }) {
   const scale = (field.config.scale as number) ?? 5;
   const style = (field.config.style as "star" | "number") ?? "star";
@@ -1773,7 +1555,8 @@ function RatingReply({
 
   return (
     <div className="space-y-4 w-full">
-      <div role="group" aria-label={`Rating out of ${scale}`} className="flex flex-wrap gap-2">
+      <fieldset className="flex flex-wrap gap-2 border-0 p-0 m-0">
+        <legend className="sr-only">{`Rating out of ${scale}`}</legend>
         {Array.from({ length: scale }, (_, i) => i + 1).map((n) => {
           const active = n <= (hover || selectedRating || 0);
           return (
@@ -1787,25 +1570,25 @@ function RatingReply({
               className={cn(
                 "flex size-11 items-center justify-center rounded-xl border transition-all cursor-pointer disabled:opacity-40",
                 active
-                  ? "border-[var(--form-accent)] bg-[var(--form-accent)]/10 text-[var(--form-accent)] shadow-sm"
-                  : "border-white/5 bg-[#1e1f22] text-zinc-400 hover:border-[var(--form-accent)]/50"
+                  ? "border-(--form-accent) bg-(--form-accent)/10 text-(--form-accent) shadow-sm"
+                  : "border-white/5 bg-[#1e1f22] text-zinc-400 hover:border-(--form-accent)/50"
               )}
             >
               {style === "star" ? (
-                <Star className={cn("size-5", active && "fill-[var(--form-accent)]")} />
+                <Star className={cn("size-5", active && "fill-(--form-accent)")} />
               ) : (
                 <span className="text-sm font-semibold">{n}</span>
               )}
             </button>
           );
         })}
-      </div>
+      </fieldset>
       <div>
         <Button
           type="button"
           onClick={() => selectedRating && onSubmit(selectedRating)}
           disabled={disabled || (field.required && selectedRating === null)}
-          className="px-5 py-2 h-9 rounded-lg bg-[var(--form-accent)] hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
+          className="px-5 py-2 h-9 rounded-lg bg-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_90%,#000)] text-[#0a0a0a] font-semibold text-xs transition-all cursor-pointer shadow-md disabled:opacity-40"
         >
           Next
         </Button>
@@ -1813,6 +1596,3 @@ function RatingReply({
     </div>
   );
 }
-
-// Re-export for page-level use if needed
-export { AiFollowUpBubble };
