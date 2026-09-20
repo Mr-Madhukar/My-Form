@@ -5,7 +5,7 @@ const globalForRedis = globalThis as unknown as { __aiRedis?: Redis };
 const redis =
   globalForRedis.__aiRedis ??
   // These route handlers intentionally read the same server env vars as the API service.
-  // eslint-disable-next-line turbo/no-undeclared-env-vars
+   
   new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", {
     lazyConnect: true,
     maxRetriesPerRequest: 2,
@@ -15,7 +15,6 @@ redis.on("error", () => {
   // Silence unhandled connection errors
 });
 
-// eslint-disable-next-line turbo/no-undeclared-env-vars
 if (process.env.NODE_ENV !== "production") globalForRedis.__aiRedis = redis;
 
 /**

@@ -10,7 +10,7 @@ export async function getUserIdFromCookies(): Promise<string | null> {
   if (!token) return null;
 
   // 1. Local verification (faster)
-  // eslint-disable-next-line turbo/no-undeclared-env-vars
+   
   const secret = process.env.JWT_ACCESS_SECRET;
   if (secret) {
     try {
