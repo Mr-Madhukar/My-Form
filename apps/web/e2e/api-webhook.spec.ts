@@ -16,6 +16,8 @@ test.describe("Razorpay Webhook Endpoint", () => {
     request,
   }) => {
     // When RAZORPAY_WEBHOOK_SECRET is not set, signature validation is skipped
+    // When the referenced user doesn't exist in the DB, the handler gracefully
+    // skips the DB insert and still returns 200.
     const payload = JSON.stringify({
       event: "payment.captured",
       payload: {
@@ -37,8 +39,7 @@ test.describe("Razorpay Webhook Endpoint", () => {
       headers: { "Content-Type": "application/json" },
     });
 
-    // Should either succeed (200) or fail on DB operation (500) — never 400/401/404
-    expect([200, 500]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
 
   test("POST /api/webhooks/razorpay rejects invalid JSON body", async ({ request }) => {
@@ -47,11 +48,11 @@ test.describe("Razorpay Webhook Endpoint", () => {
       headers: { "Content-Type": "text/plain" },
     });
 
-    // Should return 500 due to JSON.parse failure
-    expect(response.status()).toBe(500);
+    // Should return 400 for malformed body
+    expect(response.status()).toBe(400);
 
     const body = await response.json();
-    expect(body.error).toMatch(/webhook processing failed/i);
+    expect(body.error).toMatch(/invalid json body/i);
   });
 
   test("POST /api/webhooks/razorpay handles unknown event type gracefully", async ({ request }) => {
@@ -102,8 +103,8 @@ test.describe("Razorpay Webhook Endpoint", () => {
       },
     });
 
-    // Valid signature → should be accepted (200 or 500 if DB operation fails)
-    expect([200, 500]).toContain(response.status());
+    // Valid signature → should be accepted
+    expect(response.status()).toBe(200);
   });
 
   test("POST /api/webhooks/razorpay rejects forged HMAC signature", async ({ request }) => {

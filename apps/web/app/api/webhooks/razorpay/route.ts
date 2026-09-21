@@ -10,9 +10,12 @@ async function getDb() {
 }
 
 function isSignatureValid(rawBody: string, signature: string | null, secret?: string): boolean {
-  if (!secret || !signature) return true;
+  // No secret configured → skip validation (dev / CI environments)
+  if (!secret) return true;
+  // Secret IS configured but request has no signature → reject
+  if (!signature) return false;
   const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  return expected === signature;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
 interface SubscriptionEntity {
@@ -34,9 +37,21 @@ interface PaymentEntity {
   };
 }
 
+/** Returns true if the user row exists in the DB. */
+async function userExists(userId: string): Promise<boolean> {
+  const { db, eq, usersTable } = await getDb();
+  const rows = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  return rows.length > 0;
+}
+
 async function handleSubscriptionActivated(sub?: SubscriptionEntity) {
   const userId = sub?.notes?.userId;
   if (!userId) return;
+
+  if (!(await userExists(userId))) {
+    console.warn(`[Razorpay Webhook] Ignoring subscription — user ${userId} not found`);
+    return;
+  }
 
   const plan = sub?.notes?.plan || "pro";
   const cycle = sub?.notes?.cycle || "monthly";
@@ -62,6 +77,11 @@ async function handlePaymentCaptured(payment?: PaymentEntity) {
   const userId = payment?.notes?.userId;
   const plan = payment?.notes?.plan;
   if (!userId || !plan) return;
+
+  if (!(await userExists(userId))) {
+    console.warn(`[Razorpay Webhook] Ignoring payment — user ${userId} not found`);
+    return;
+  }
 
   const cycle = payment?.notes?.cycle || "monthly";
   const { db, eq, usersTable, subscriptionsTable } = await getDb();
@@ -98,31 +118,52 @@ async function handleSubscriptionCancelled(sub?: SubscriptionEntity) {
   }
 }
 
+function tryParseJSON(raw: string): unknown {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
     const signature = req.headers.get("x-razorpay-signature");
 
     if (!isSignatureValid(rawBody, signature, process.env.RAZORPAY_WEBHOOK_SECRET)) {
-      console.error("[Razorpay Webhook] Invalid signature");
+      console.warn("[Razorpay Webhook] Invalid signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
-    const event = JSON.parse(rawBody);
-    const eventType = event?.event as string;
+    const event = tryParseJSON(rawBody);
+    if (!event || typeof event !== "object") {
+      console.warn("[Razorpay Webhook] Malformed request body — not valid JSON");
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
-    console.info(`[Razorpay Webhook] Received event: ${eventType}`);
+    const eventType = (event as Record<string, unknown>)?.event as string | undefined;
+
+    console.info(`[Razorpay Webhook] Received event: ${eventType ?? "unknown"}`);
+
+    const payload = (event as Record<string, unknown>)?.payload as Record<string, unknown> | undefined;
 
     if (eventType === "subscription.activated" || eventType === "subscription.charged") {
-      await handleSubscriptionActivated(event?.payload?.subscription?.entity);
+      await handleSubscriptionActivated(
+        (payload?.subscription as Record<string, unknown>)?.entity as SubscriptionEntity | undefined,
+      );
     } else if (eventType === "payment.captured") {
-      await handlePaymentCaptured(event?.payload?.payment?.entity);
+      await handlePaymentCaptured(
+        (payload?.payment as Record<string, unknown>)?.entity as PaymentEntity | undefined,
+      );
     } else if (
       eventType === "subscription.cancelled" ||
       eventType === "subscription.halted" ||
       eventType === "subscription.completed"
     ) {
-      await handleSubscriptionCancelled(event?.payload?.subscription?.entity);
+      await handleSubscriptionCancelled(
+        (payload?.subscription as Record<string, unknown>)?.entity as SubscriptionEntity | undefined,
+      );
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
@@ -131,3 +172,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }
+
