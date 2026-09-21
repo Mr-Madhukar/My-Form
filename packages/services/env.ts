@@ -7,6 +7,7 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string(),
   JWT_REFRESH_SECRET: z.string(),
   RESEND_API_KEY: z.string(),
+  RESEND_FROM_EMAIL: z.string().optional(),
   REDIS_URL: z.string(),
   FRONTEND_URL: z.string(),
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),

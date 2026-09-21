@@ -17,26 +17,21 @@ export interface AnswerItem {
   readonly value: string;
 }
 
-export interface PaymentSummary {
+export interface PaymentReceiptInfo {
   readonly status: string;
   readonly amount: number;
   readonly currency: string;
   readonly transactionId?: string;
+  readonly itemName?: string;
+  readonly provider?: string;
 }
 
-export interface LeadScoreSummary {
-  readonly score: number;
-  readonly intent: "high" | "warm" | "low";
-}
-
-export interface NewResponseEmailProps {
+export interface SubmissionReceiptEmailProps {
   readonly formTitle: string;
-  readonly responseCount: number;
-  readonly responsesUrl: string;
   readonly submittedAt?: string;
-  readonly answersSummary?: readonly AnswerItem[];
-  readonly payment?: PaymentSummary;
-  readonly leadScore?: LeadScoreSummary;
+  readonly answers?: readonly AnswerItem[];
+  readonly payment?: PaymentReceiptInfo;
+  readonly formUrl?: string;
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -51,78 +46,93 @@ function getCurrencySymbol(currency?: string): string {
   return CURRENCY_SYMBOLS[currency] ?? "$";
 }
 
-function getLeadScoreBadgeStyle(intent: "high" | "warm" | "low"): React.CSSProperties {
-  if (intent === "high") return highIntentBadge;
-  if (intent === "warm") return warmIntentBadge;
-  return lowIntentBadge;
-}
-
-export function NewResponseEmail({
+export function SubmissionReceiptEmail({
   formTitle,
-  responseCount,
-  responsesUrl,
   submittedAt,
-  answersSummary = [],
+  answers = [],
   payment,
-  leadScore,
-}: Readonly<NewResponseEmailProps>) {
+  formUrl,
+}: Readonly<SubmissionReceiptEmailProps>) {
   const isPaid = payment?.status === "paid";
   const currencySymbol = getCurrencySymbol(payment?.currency);
 
   return (
     <Html>
       <Head />
-      <Preview>{`New response #${responseCount} on "${formTitle}" 🎉`}</Preview>
+      <Preview>
+        {isPaid
+          ? `Payment Receipt & Submission Confirmed: "${formTitle}"`
+          : `Submission Received: "${formTitle}"`}
+      </Preview>
       <Body style={body}>
         <Container style={container}>
-          {/* Header */}
+          {/* Brand Header */}
           <Section style={headerSection}>
             <div style={brandBadge}>
               <span style={brandDot} />
-              <span style={brandText}>My-Form Notifications</span>
+              <span style={brandText}>My-Form</span>
             </div>
           </Section>
 
-          {/* Title & Count */}
+          {/* Title and Confirmation status */}
           <Section style={heroSection}>
-            <div style={countPill}>Response #{responseCount}</div>
-            <Heading style={h1}>New Form Submission</Heading>
+            <div style={statusPill}>
+              {isPaid ? "✓ Payment & Submission Confirmed" : "✓ Response Recorded"}
+            </div>
+            <Heading style={h1}>{formTitle}</Heading>
             <Text style={subtext}>
-              Someone just submitted <strong>&quot;{formTitle}&quot;</strong>.
+              {isPaid
+                ? "Your payment was processed successfully and your submission has been received."
+                : "Thank you! Your response has been securely saved."}
             </Text>
-            {submittedAt && <Text style={metaText}>Submitted at {submittedAt}</Text>}
+            {submittedAt && <Text style={metaText}>Submitted on {submittedAt}</Text>}
           </Section>
 
-          {/* Dynamic Badges Row */}
-          {(isPaid || leadScore) && (
-            <Section style={badgesSection}>
-              {isPaid && (
-                <div style={paidBadge}>
-                  💰 {currencySymbol}
-                  {payment.amount} {payment.currency} PAID
+          {/* Payment Receipt Box (if payment is present) */}
+          {isPaid && (
+            <Section style={receiptCard}>
+              <div style={receiptHeader}>
+                <Text style={receiptTitle}>Payment Receipt</Text>
+                <span style={paidBadge}>PAID</span>
+              </div>
+              <Hr style={divider} />
+              <div style={receiptRow}>
+                <Text style={receiptLabel}>Item / Service</Text>
+                <Text style={receiptValue}>{payment.itemName || "Form Submission / Registration"}</Text>
+              </div>
+              <div style={receiptRow}>
+                <Text style={receiptLabel}>Amount Paid</Text>
+                <Text style={receiptAmount}>
+                  {currencySymbol}
+                  {payment.amount} {payment.currency}
+                </Text>
+              </div>
+              {payment.transactionId && (
+                <div style={receiptRow}>
+                  <Text style={receiptLabel}>Transaction ID</Text>
+                  <Text style={receiptMono}>{payment.transactionId}</Text>
                 </div>
               )}
-              {leadScore && (
-                <div style={getLeadScoreBadgeStyle(leadScore.intent)}>
-                  {leadScore.intent === "high" ? "🔥" : "⚡"} {leadScore.score}/100 LEAD SCORE
+              {payment.provider && (
+                <div style={receiptRow}>
+                  <Text style={receiptLabel}>Payment Gateway</Text>
+                  <Text style={receiptValue}>
+                    {payment.provider.toUpperCase()} (256-Bit SSL Encrypted)
+                  </Text>
                 </div>
               )}
             </Section>
           )}
 
-          {/* Submitted Answers Preview */}
-          {answersSummary.length > 0 && (
+          {/* Submitted Answers Summary (if available) */}
+          {answers.length > 0 && (
             <Section style={answersSection}>
-              <Text style={sectionTitle}>Response Preview</Text>
+              <Text style={sectionTitle}>Your Submitted Details</Text>
               <div style={answersCard}>
-                {answersSummary.slice(0, 8).map((item, idx) => (
+                {answers.map((item, idx) => (
                   <div
                     key={`${item.label}-${idx}`}
-                    style={
-                      idx === Math.min(answersSummary.length, 8) - 1
-                        ? answerRowLast
-                        : answerRow
-                    }
+                    style={idx === answers.length - 1 ? answerRowLast : answerRow}
                   >
                     <Text style={answerLabel}>{item.label}</Text>
                     <Text style={answerValue}>{item.value || "—"}</Text>
@@ -132,22 +142,24 @@ export function NewResponseEmail({
             </Section>
           )}
 
-          {/* Primary CTA Button */}
-          <Section style={ctaSection}>
-            <Link href={responsesUrl} style={buttonPrimary}>
-              View Full Response in Dashboard →
-            </Link>
-          </Section>
+          {/* Optional Form Link CTA */}
+          {formUrl && (
+            <Section style={ctaSection}>
+              <Link href={formUrl} style={buttonSecondary}>
+                Visit Form Page →
+              </Link>
+            </Section>
+          )}
 
           <Hr style={footerDivider} />
 
           {/* Footer */}
           <Section style={footerSection}>
             <Text style={footerText}>
-              You are receiving this email because you created <strong>{formTitle}</strong> on My-Form.
+              This is an automated confirmation from <strong>My-Form</strong> on behalf of the form creator.
             </Text>
             <Text style={footerSubtext}>
-              Total lifetime responses on this form: <strong>{responseCount}</strong>
+              If you have questions about your registration or order, please reply directly to the organizer.
             </Text>
           </Section>
         </Container>
@@ -157,7 +169,7 @@ export function NewResponseEmail({
 }
 
 // ---------------------------------------------------------------------------
-// Styles
+// Styles (Dark-mode, Glassmorphism, SaaS Aesthetic)
 // ---------------------------------------------------------------------------
 
 const body = {
@@ -179,7 +191,7 @@ const container = {
 };
 
 const headerSection = {
-  marginBottom: "20px",
+  marginBottom: "24px",
 };
 
 const brandBadge = {
@@ -209,20 +221,19 @@ const brandText = {
 };
 
 const heroSection = {
-  marginBottom: "20px",
+  marginBottom: "24px",
 };
 
-const countPill = {
+const statusPill = {
   display: "inline-block",
-  backgroundColor: "rgba(232, 133, 74, 0.15)",
-  border: "1px solid rgba(232, 133, 74, 0.35)",
-  color: "#E8854A",
+  backgroundColor: "rgba(16, 185, 129, 0.15)",
+  border: "1px solid rgba(16, 185, 129, 0.3)",
+  color: "#34D399",
   fontSize: "12px",
-  fontWeight: "800",
+  fontWeight: "700",
   borderRadius: "8px",
   padding: "4px 10px",
-  marginBottom: "10px",
-  letterSpacing: "0.05em",
+  marginBottom: "12px",
 };
 
 const h1 = {
@@ -238,7 +249,7 @@ const subtext = {
   color: "#9CA3AF",
   fontSize: "14px",
   lineHeight: "1.5",
-  margin: "0 0 4px 0",
+  margin: "0 0 6px 0",
 };
 
 const metaText = {
@@ -248,57 +259,75 @@ const metaText = {
   fontFamily: "monospace",
 };
 
-const badgesSection = {
+const receiptCard = {
+  backgroundColor: "#161822",
+  borderRadius: "12px",
+  border: "1px solid #282C3D",
+  padding: "20px",
+  marginBottom: "24px",
+};
+
+const receiptHeader = {
   display: "flex",
-  gap: "10px",
-  marginBottom: "22px",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "12px",
+};
+
+const receiptTitle = {
+  color: "#FFFFFF",
+  fontSize: "15px",
+  fontWeight: "700",
+  margin: 0,
 };
 
 const paidBadge = {
-  display: "inline-block",
-  backgroundColor: "rgba(16, 185, 129, 0.15)",
-  border: "1px solid rgba(16, 185, 129, 0.3)",
-  color: "#34D399",
+  backgroundColor: "rgba(16, 185, 129, 0.2)",
+  border: "1px solid rgba(16, 185, 129, 0.4)",
+  color: "#10B981",
   fontSize: "11px",
   fontWeight: "800",
   borderRadius: "6px",
-  padding: "4px 10px",
+  padding: "3px 8px",
   letterSpacing: "0.05em",
 };
 
-const highIntentBadge = {
-  display: "inline-block",
-  backgroundColor: "rgba(239, 68, 68, 0.15)",
-  border: "1px solid rgba(239, 68, 68, 0.35)",
-  color: "#F87171",
-  fontSize: "11px",
-  fontWeight: "800",
-  borderRadius: "6px",
-  padding: "4px 10px",
-  letterSpacing: "0.05em",
+const divider = {
+  borderTop: "1px solid #232635",
+  margin: "12px 0",
 };
 
-const warmIntentBadge = {
-  display: "inline-block",
-  backgroundColor: "rgba(245, 158, 11, 0.15)",
-  border: "1px solid rgba(245, 158, 11, 0.35)",
-  color: "#FBBF24",
-  fontSize: "11px",
-  fontWeight: "800",
-  borderRadius: "6px",
-  padding: "4px 10px",
-  letterSpacing: "0.05em",
+const receiptRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "6px 0",
 };
 
-const lowIntentBadge = {
-  display: "inline-block",
-  backgroundColor: "#1F222F",
-  border: "1px solid #2B2E3E",
+const receiptLabel = {
   color: "#9CA3AF",
-  fontSize: "11px",
+  fontSize: "13px",
+  margin: 0,
+};
+
+const receiptValue = {
+  color: "#E5E7EB",
+  fontSize: "13px",
+  fontWeight: "500",
+  margin: 0,
+};
+
+const receiptAmount = {
+  color: "#34D399",
+  fontSize: "15px",
   fontWeight: "700",
-  borderRadius: "6px",
-  padding: "4px 10px",
+  margin: 0,
+};
+
+const receiptMono = {
+  color: "#D1D5DB",
+  fontSize: "12px",
+  fontFamily: "monospace",
+  margin: 0,
 };
 
 const answersSection = {
@@ -351,16 +380,16 @@ const ctaSection = {
   margin: "24px 0",
 };
 
-const buttonPrimary = {
+const buttonSecondary = {
   display: "inline-block",
-  backgroundColor: "#E8854A",
-  color: "#080808",
-  fontWeight: "700",
-  fontSize: "14px",
-  padding: "12px 28px",
-  borderRadius: "10px",
+  backgroundColor: "#1A1C26",
+  border: "1px solid #2D3142",
+  color: "#E5E7EB",
+  fontSize: "13px",
+  fontWeight: "600",
+  padding: "10px 22px",
+  borderRadius: "8px",
   textDecoration: "none",
-  boxShadow: "0 4px 14px rgba(232, 133, 74, 0.4)",
 };
 
 const footerDivider = {
@@ -386,4 +415,4 @@ const footerSubtext = {
   margin: 0,
 };
 
-export default NewResponseEmail;
+export default SubmissionReceiptEmail;

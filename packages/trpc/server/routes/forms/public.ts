@@ -150,12 +150,71 @@ function syncToGoogleSheets(
   })();
 }
 
-function notifyWorkspaceOwner(
-  workspaceId: string,
-  formId: string,
-  formVersionId: string,
-  title: string,
-): void {
+function extractRespondentEmail(
+  fields: readonly { id: string; type: string; label: string }[],
+  answers: Record<string, unknown>,
+): string | null {
+  for (const f of fields) {
+    if (f.type === "email") {
+      const val = answers[f.id];
+      if (typeof val === "string" && val.includes("@")) return val.trim();
+    }
+  }
+  for (const f of fields) {
+    if (f.label.toLowerCase().includes("email")) {
+      const val = answers[f.id];
+      if (typeof val === "string" && val.includes("@")) return val.trim();
+    }
+  }
+  return null;
+}
+
+function formatAnswerString(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(formatAnswerString).join(", ");
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+
+function formatAnswersSummary(
+  fields: readonly { id: string; label: string }[],
+  answers: Record<string, unknown>,
+): { label: string; value: string }[] {
+  return fields
+    .map((f) => {
+      const raw = answers[f.id];
+      if (raw === undefined || raw === null || raw === "") return null;
+      const formatted = formatAnswerString(raw);
+      if (!formatted) return null;
+      return { label: f.label, value: formatted };
+    })
+    .filter((item): item is { label: string; value: string } => item !== null);
+}
+
+function notifySubmissionEmails(params: {
+  readonly workspaceId: string;
+  readonly formId: string;
+  readonly formVersionId: string;
+  readonly title: string;
+  readonly publicSlug: string;
+  readonly fields: readonly { id: string; type: string; label: string }[];
+  readonly answers: Record<string, unknown>;
+  readonly payment?: {
+    readonly provider: string;
+    readonly transactionId: string;
+    readonly amount: number;
+    readonly currency: string;
+    readonly status: string;
+  };
+}): void {
   void (async () => {
     try {
       const [owner] = await db
@@ -164,11 +223,17 @@ function notifyWorkspaceOwner(
         .innerJoin(usersTable, eq(usersTable.id, workspaceMembersTable.userId))
         .where(
           and(
-            eq(workspaceMembersTable.workspaceId, workspaceId),
+            eq(workspaceMembersTable.workspaceId, params.workspaceId),
             eq(workspaceMembersTable.role, "owner"),
           ),
         )
         .limit(1);
+
+      const answersSummary = formatAnswersSummary(params.fields, params.answers);
+      const submittedAt = new Date().toLocaleString("en-US", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
 
       if (owner?.email) {
         const countRows = await db
@@ -176,7 +241,7 @@ function notifyWorkspaceOwner(
           .from(responsesTable)
           .where(
             and(
-              eq(responsesTable.formVersionId, formVersionId),
+              eq(responsesTable.formVersionId, params.formVersionId),
               sql`${responsesTable.completedAt} is not null`,
             ),
           );
@@ -184,30 +249,96 @@ function notifyWorkspaceOwner(
 
         await emailService.sendNewResponseEmail({
           ownerEmail: owner.email,
-          formTitle: title,
-          formId,
+          formTitle: params.title,
+          formId: params.formId,
           responseCount,
+          submittedAt,
+          answersSummary,
+          payment: params.payment
+            ? {
+                status: params.payment.status,
+                amount: params.payment.amount,
+                currency: params.payment.currency,
+                transactionId: params.payment.transactionId,
+              }
+            : undefined,
+        });
+      }
+
+      // Send confirmation & receipt to respondent if they provided an email
+      const respondentEmail = extractRespondentEmail(params.fields, params.answers);
+      if (respondentEmail) {
+        const frontendBase = process.env.FRONTEND_URL || "https://my-form.mrmadhukar.in";
+        await emailService.sendSubmissionReceiptEmail({
+          to: respondentEmail,
+          formTitle: params.title,
+          formUrl: `${frontendBase}/f/${params.publicSlug}`,
+          submittedAt,
+          answers: answersSummary,
+          payment: params.payment
+            ? {
+                status: params.payment.status,
+                amount: params.payment.amount,
+                currency: params.payment.currency,
+                transactionId: params.payment.transactionId,
+                provider: params.payment.provider,
+              }
+            : undefined,
         });
       }
     } catch (err) {
-      console.error("Failed to send new response email:", err);
+      console.error("[EmailNotification] Failed to send submission emails:", err);
     }
   })();
 }
 
-function triggerLeadScoring(
-  formId: string,
-  responseId: string,
-  title: string,
-  settings: Record<string, unknown>,
-): void {
-  if (!settings.aiLeadScoringEnabled) return;
+function triggerLeadScoring(params: {
+  readonly workspaceId: string;
+  readonly formId: string;
+  readonly responseId: string;
+  readonly title: string;
+  readonly settings: Record<string, unknown>;
+  readonly fields: readonly { id: string; type: string; label: string }[];
+  readonly answers: Record<string, unknown>;
+}): void {
+  if (!params.settings.aiLeadScoringEnabled) return;
 
   void (async () => {
     try {
-      await scoreLeadResponse(formId, responseId, title);
+      const result = await scoreLeadResponse(params.formId, params.responseId, params.title);
+      if (result && (result.intent === "high" || result.score >= 70)) {
+        const [owner] = await db
+          .select({ email: usersTable.email })
+          .from(workspaceMembersTable)
+          .innerJoin(usersTable, eq(usersTable.id, workspaceMembersTable.userId))
+          .where(
+            and(
+              eq(workspaceMembersTable.workspaceId, params.workspaceId),
+              eq(workspaceMembersTable.role, "owner"),
+            ),
+          )
+          .limit(1);
+
+        if (owner?.email) {
+          const respondentContact =
+            extractRespondentEmail(params.fields, params.answers) ?? undefined;
+          const answersSummary = formatAnswersSummary(params.fields, params.answers);
+
+          await emailService.sendHotLeadAlertEmail({
+            ownerEmail: owner.email,
+            formTitle: params.title,
+            formId: params.formId,
+            responseId: params.responseId,
+            score: result.score,
+            intent: result.intent,
+            reason: result.reason,
+            respondentContact,
+            answersSummary,
+          });
+        }
+      }
     } catch (err) {
-      console.error("[LeadScoring] Background scoring failed:", err);
+      console.error("[LeadScoring] Background scoring or alert failed:", err);
     }
   })();
 }
@@ -403,8 +534,25 @@ export const formsPublicRouter = router({
 
       // Fire-and-forget side effects
       syncToGoogleSheets(form, fields, input.answers);
-      notifyWorkspaceOwner(form.workspaceId, form.id, published.id, published.title);
-      triggerLeadScoring(form.id, id, published.title, publishedSettings);
+      notifySubmissionEmails({
+        workspaceId: form.workspaceId,
+        formId: form.id,
+        formVersionId: published.id,
+        title: published.title,
+        publicSlug: form.publicSlug,
+        fields,
+        answers: input.answers,
+        payment: input.payment,
+      });
+      triggerLeadScoring({
+        workspaceId: form.workspaceId,
+        formId: form.id,
+        responseId: id,
+        title: published.title,
+        settings: publishedSettings,
+        fields,
+        answers: input.answers,
+      });
 
       return { id };
     }),
