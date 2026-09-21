@@ -12,7 +12,7 @@ export const formTitleSchema = z
   .min(1, "Title is required")
   .max(255, "Title must be 255 characters or fewer")
   .trim()
-  .refine((v) => !/<[^>]+>/.test(v), { message: "HTML tags are not allowed" });
+  .refine((v) => !/<[^<>]+>/.test(v), { message: "HTML tags are not allowed" });
 
 /** Custom slug: alphanumeric + hyphens, 3–50 chars, lowercase */
 export const slugSchema = z
@@ -25,7 +25,6 @@ export const slugSchema = z
 
 /** Extended email validation with domain sanity check */
 export const emailSchema = z
-  .string()
   .email("Invalid email address")
   .max(320, "Email must be 320 characters or fewer")
   .refine((v) => v.includes(".") && v.split("@")[1]!.includes("."), {
@@ -39,14 +38,14 @@ export const passwordSchema = z
   .max(128, "Password must be 128 characters or fewer")
   .refine((v) => /[A-Z]/.test(v), { message: "Must contain an uppercase letter" })
   .refine((v) => /[a-z]/.test(v), { message: "Must contain a lowercase letter" })
-  .refine((v) => /[0-9]/.test(v), { message: "Must contain a number" })
-  .refine((v) => /[^A-Za-z0-9]/.test(v), { message: "Must contain a special character" });
+  .refine((v) => /\d/.test(v), { message: "Must contain a number" })
+  .refine((v) => /[^A-Za-z\d]/.test(v), { message: "Must contain a special character" });
 
 /** Form description: optional, max 2000 chars, no HTML */
 export const formDescriptionSchema = z
   .string()
   .max(2000, "Description must be 2000 characters or fewer")
-  .refine((v) => !/<[^>]+>/.test(v), { message: "HTML tags are not allowed" })
+  .refine((v) => !/<[^<>]+>/.test(v), { message: "HTML tags are not allowed" })
   .optional()
   .or(z.literal(""));
 

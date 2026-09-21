@@ -16,13 +16,37 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "~/trpc/client";
-import { useFormEditorStore } from "~/stores/form-editor";
+import { useFormEditorStore, type EditorField } from "~/stores/form-editor";
 import { ShareFormPopover } from "~/components/share-form-popover";
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 
-function TimeAgo({ date }: { date: Date }) {
+function scrollToField(id: string) {
+  document
+    .querySelector(`[data-field-id="${id}"]`)
+    ?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function validateField(f: EditorField): string | null {
+  if (!f.label?.trim()) {
+    return "Label is required";
+  }
+  if (f.type === "single_choice" || f.type === "multiple_choice") {
+    const options =
+      (f.config.options as Array<{ id: string; label: string }> | undefined) ?? [];
+    const filled = options.filter((o) => o.label?.trim());
+    if (filled.length < 2) return "Add at least 2 options";
+  } else if (f.type === "rating") {
+    const scale = f.config.scale;
+    const style = f.config.style;
+    if (scale !== 5 && scale !== 10) return "Select a rating scale";
+    if (style !== "star" && style !== "number") return "Select a rating style";
+  }
+  return null;
+}
+
+function TimeAgo({ date }: { readonly date: Date }) {
   const [label, setLabel] = useState("");
 
   useEffect(() => {
@@ -46,11 +70,11 @@ export function EditorTopbar({
   publicSlug,
   visibility: initialVisibility,
 }: {
-  formId: string;
-  publicSlug: string | null;
-  visibility: "public" | "unlisted";
+  readonly formId: string;
+  readonly publicSlug: string | null;
+  readonly visibility: "public" | "unlisted";
 }) {
-  const [visibility, setVisibilityState] = useState<"public" | "unlisted">(initialVisibility);
+  const [visibility, setVisibility] = useState<"public" | "unlisted">(initialVisibility);
   const {
     formVersion,
     fields,
@@ -74,12 +98,12 @@ export function EditorTopbar({
 
   async function handleToggleVisibility() {
     const next = visibility === "public" ? "unlisted" : "public";
-    setVisibilityState(next);
+    setVisibility(next);
     try {
       await setVisibilityMutation.mutateAsync({ formId, visibility: next });
       toast.success(next === "public" ? "Form is now public" : "Form is now unlisted");
     } catch {
-      setVisibilityState(visibility);
+      setVisibility((curr) => (curr === "public" ? "unlisted" : "public"));
       toast.error("Failed to update visibility");
     }
   }
@@ -174,32 +198,15 @@ export function EditorTopbar({
   }, [save, publicSlug, selectedFieldId, removeField]);
 
   function validateFieldsForPublish(): Record<string, string> | null {
-    const errors: Record<string, string> = {};
     if (!formVersion?.title?.trim()) return null; // handled separately via titleRef
+    const errors: Record<string, string> = {};
     for (const f of fields) {
-      if (!f.label?.trim()) {
-        errors[f.id] = "Label is required";
-        continue;
-      }
-      if (f.type === "single_choice" || f.type === "multiple_choice") {
-        const options =
-          (f.config.options as Array<{ id: string; label: string }> | undefined) ?? [];
-        const filled = options.filter((o) => o.label?.trim());
-        if (filled.length < 2) errors[f.id] = "Add at least 2 options";
-      } else if (f.type === "rating") {
-        const scale = f.config.scale;
-        const style = f.config.style;
-        if (scale !== 5 && scale !== 10) errors[f.id] = "Select a rating scale";
-        else if (style !== "star" && style !== "number") errors[f.id] = "Select a rating style";
+      const err = validateField(f);
+      if (err) {
+        errors[f.id] = err;
       }
     }
     return Object.keys(errors).length > 0 ? errors : null;
-  }
-
-  function scrollToField(id: string) {
-    document
-      .querySelector(`[data-field-id="${id}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   async function handlePublish() {
@@ -239,6 +246,27 @@ export function EditorTopbar({
     }
   }
 
+  function renderSaveStatus() {
+    if (isSaving) {
+      return (
+        <span className="flex items-center gap-1.5">
+          <Loader2 className="size-3 animate-spin text-[#E8854A]" /> saving…
+        </span>
+      );
+    }
+    if (lastSavedAt) {
+      return (
+        <span className="flex items-center gap-1.5 text-[#6B6B6B]">
+          <Check className="size-3 text-[#E8854A]" /> <TimeAgo date={lastSavedAt} />
+        </span>
+      );
+    }
+    if (dirty) {
+      return <span className="text-[#6B6B6B]">unsaved</span>;
+    }
+    return null;
+  }
+
   return (
     <header className="flex h-14 shrink-0 items-center justify-between rounded-2xl bg-white/2 px-3 ring-1 ring-white/6 backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
       {/* Back + Title */}
@@ -276,17 +304,7 @@ export function EditorTopbar({
           }}
         />
         <span className="font-mono text-[11px] text-[#6B6B6B]">
-          {isSaving ? (
-            <span className="flex items-center gap-1.5">
-              <Loader2 className="size-3 animate-spin text-[#E8854A]" /> saving…
-            </span>
-          ) : lastSavedAt ? (
-            <span className="flex items-center gap-1.5 text-[#6B6B6B]">
-              <Check className="size-3 text-[#E8854A]" /> <TimeAgo date={lastSavedAt} />
-            </span>
-          ) : dirty ? (
-            <span className="text-[#6B6B6B]">unsaved</span>
-          ) : null}
+          {renderSaveStatus()}
         </span>
       </div>
 

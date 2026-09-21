@@ -12,6 +12,7 @@ export function LandingFooter() {
             alt="My Form"
             width={88}
             height={22}
+            style={{ width: "auto", height: "auto" }}
             className="object-contain opacity-60 logo-img"
           />
           <p className="font-mono text-[11px] text-zinc-400">

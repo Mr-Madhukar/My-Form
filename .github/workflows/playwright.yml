@@ -56,18 +56,18 @@ jobs:
 
       - name: Install Playwright Browsers
         working-directory: apps/web
-        run: npx playwright install --with-deps
+        run: pnpm exec playwright install --with-deps
 
       - name: Run database migrations
         working-directory: packages/database
-        run: npx drizzle-kit migrate
+        run: pnpm exec drizzle-kit migrate
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/myform_test
 
       - name: Start Express Backend API
         working-directory: apps/api
         run: |
-          npx tsx ./src/index.ts &
+          pnpm exec tsx ./src/index.ts &
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8123/health | grep -q "healthy"; then
               echo "Backend API is up and healthy!"

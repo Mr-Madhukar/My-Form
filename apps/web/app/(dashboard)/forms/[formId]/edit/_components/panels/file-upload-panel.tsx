@@ -6,7 +6,7 @@ import { Switch } from "~/components/ui/switch";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 
-export function FileUploadPanel({ field }: { field: EditorField }) {
+export function FileUploadPanel({ field }: { readonly field: EditorField }) {
   const updateField = useFormEditorStore((s) => s.updateField);
   const config = field.config as { maxSizeMb?: number };
 
@@ -20,7 +20,7 @@ export function FileUploadPanel({ field }: { field: EditorField }) {
           value={field.label}
           onChange={(e) => updateField(field.id, { label: e.target.value })}
           placeholder="Enter your question"
-          className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+          className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
         />
       </div>
 
@@ -33,11 +33,11 @@ export function FileUploadPanel({ field }: { field: EditorField }) {
           value={config.maxSizeMb ?? 10}
           onChange={(e) =>
             updateField(field.id, {
-              config: { ...config, maxSizeMb: parseInt(e.target.value) || 10 },
+              config: { ...config, maxSizeMb: Number.parseInt(e.target.value, 10) || 10 },
             })
           }
           placeholder="10"
-          className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+          className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
         />
       </div>
 

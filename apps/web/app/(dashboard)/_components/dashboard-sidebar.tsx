@@ -137,6 +137,7 @@ function DashboardSidebarContent() {
               alt="My Form"
               width={100}
               height={25}
+              style={{ width: "auto", height: "auto" }}
               className="object-contain logo-img"
             />
           </Link>
@@ -399,7 +400,7 @@ export function MobileNav() {
   return (
     <div className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-900 bg-[#080808] px-4 md:hidden">
       <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
-        <Image src={logoImg} alt="My Form" width={100} height={25} className="object-contain logo-img" />
+        <Image src={logoImg} alt="My Form" width={100} height={25} style={{ width: "auto", height: "auto" }} className="object-contain logo-img" />
       </Link>
       <SidebarTrigger className="text-zinc-500 hover:bg-zinc-900/60 hover:text-zinc-200" />
     </div>

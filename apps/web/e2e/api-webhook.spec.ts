@@ -23,7 +23,7 @@ test.describe("Razorpay Webhook Endpoint", () => {
           entity: {
             id: "pay_test_123",
             notes: {
-              userId: "nonexistent-user-id",
+              userId: "00000000-0000-0000-0000-000000000001",
               plan: "pro",
               cycle: "monthly",
             },
@@ -86,7 +86,7 @@ test.describe("Razorpay Webhook Endpoint", () => {
         subscription: {
           entity: {
             id: "sub_test_cancel",
-            notes: { userId: "nonexistent-user" },
+            notes: { userId: "00000000-0000-0000-0000-000000000002" },
           },
         },
       },

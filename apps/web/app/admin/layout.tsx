@@ -44,6 +44,8 @@ export default async function AdminLayout({
                 alt="My Form"
                 width={90}
                 height={24}
+                priority
+                style={{ width: "auto", height: "auto" }}
                 className="object-contain logo-img"
               />
             </Link>

@@ -900,6 +900,8 @@ export default function ExplorePage() {
                 alt="My Form"
                 width={100}
                 height={25}
+                priority
+                style={{ width: "auto", height: "auto" }}
                 className="object-contain logo-img"
               />
             </Link>

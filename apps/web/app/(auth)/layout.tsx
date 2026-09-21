@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import logoImg from "~/public/logo.png";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({ children }: { readonly children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center bg-[#080808] px-4 py-12 gap-7 overflow-hidden" suppressHydrationWarning>
       {/* Atmospheric glow */}
@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* Wordmark */}
       <Link href="/" className="flex items-center transition-opacity duration-300 hover:opacity-80">
-        <Image src={logoImg} alt="My Form" width={120} height={30} className="object-contain logo-img" />
+        <Image src={logoImg} alt="My Form" width={120} height={30} priority style={{ width: "auto", height: "auto" }} className="object-contain logo-img" />
       </Link>
 
       <main className="w-full max-w-md">{children}</main>
