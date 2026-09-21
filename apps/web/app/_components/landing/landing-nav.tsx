@@ -21,7 +21,8 @@ const navLinks = [
   { href: "#preview", label: "Overview" },
   { href: "#workflow", label: "Features" },
   { href: "#wedge", label: "AI Engine" },
-  { href: "#testimonials", label: "Testimonials" },
+  { href: "#comparison", label: "Why Us" },
+  { href: "#pricing", label: "Pricing" },
   { href: "/explore", label: "Explore" },
   { href: "#faq", label: "FAQ" },
 ];

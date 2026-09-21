@@ -15,6 +15,10 @@ const WedgeShowcase = dynamic(
   () => import("./wedge-showcase").then((mod) => mod.WedgeShowcase),
   { ssr: true }
 );
+const ComparisonSection = dynamic(
+  () => import("./comparison").then((mod) => mod.ComparisonSection),
+  { ssr: true }
+);
 const Pricing = dynamic(
   () => import("./pricing").then((mod) => mod.Pricing),
   { ssr: true }
@@ -65,6 +69,7 @@ export function LandingPage() {
         <StatsBar />
         <ProductBento />
         <WedgeShowcase />
+        <ComparisonSection />
         <Pricing />
         <Testimonials />
         <LandingFaq />

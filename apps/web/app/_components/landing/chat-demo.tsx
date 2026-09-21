@@ -38,7 +38,7 @@ function TypingBubble() {
       className="flex items-end gap-2.5"
     >
       <Avatar />
-      <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-white/[0.07] bg-[#141414] px-4 py-3.5">
+      <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-white/7 bg-[#141414] px-4 py-3.5">
         {[0, 1, 2].map((dot) => (
           <span
             key={dot}
@@ -51,7 +51,7 @@ function TypingBubble() {
   );
 }
 
-function DemoBubble({ item }: { item: (typeof sequence)[number] }) {
+function DemoBubble({ item }: { readonly item: (typeof sequence)[number] }) {
   const isForm = item.side === "form" || item.side === "ai" || item.side === "done";
   const isUser = item.side === "user" || item.side === "choice" || item.side === "rating";
 
@@ -91,11 +91,11 @@ function DemoBubble({ item }: { item: (typeof sequence)[number] }) {
         className={cn(
           "max-w-[82%] rounded-2xl px-4 py-3 text-left text-[14px] leading-relaxed",
           item.side === "form" &&
-            "rounded-bl-sm border border-white/[0.07] bg-[#141414] text-[#F2F2F2]",
+            "rounded-bl-sm border border-white/7 bg-[#141414] text-[#F2F2F2]",
           item.side === "ai" &&
             "rounded-bl-sm border-l-2 border-[#E8854A] bg-[#1a1a1a] text-[#F2F2F2]",
           item.side === "done" &&
-            "rounded-bl-sm border border-white/[0.07] bg-[#141414] text-[#F2F2F2]",
+            "rounded-bl-sm border border-white/7 bg-[#141414] text-[#F2F2F2]",
           isUser && "rounded-br-sm bg-[#E8854A] text-[#0a0a0a]",
         )}
       >
@@ -133,14 +133,14 @@ export function ChatDemo() {
   const shown = sequence.slice(0, visible);
 
   return (
-    <div className="rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/[0.06]">
+    <div className="rounded-[2rem] bg-white/3 p-1.5 ring-1 ring-white/6">
       <motion.div
         initial={{ opacity: 0, y: 18, filter: "blur(6px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ type: "spring", stiffness: 120, damping: 22 }}
         className="overflow-hidden rounded-[calc(2rem-6px)] bg-[#111] shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]"
       >
-        <div className="border-b border-white/[0.06] bg-[#080808]/70 px-4 py-3 backdrop-blur-xl">
+        <div className="border-b border-white/6 bg-[#080808]/70 px-4 py-3 backdrop-blur-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Avatar />
@@ -152,7 +152,7 @@ export function ChatDemo() {
               {String(Math.min(visible, sequence.length)).padStart(2, "0")} / 09
             </span>
           </div>
-          <div className="mt-3 h-[2px] rounded-full bg-white/[0.05]">
+          <div className="mt-3 h-0.5 rounded-full bg-white/5">
             <motion.div
               className="h-full rounded-full bg-[#E8854A]"
               animate={{ width: `${progress}%` }}
@@ -161,7 +161,7 @@ export function ChatDemo() {
           </div>
         </div>
 
-        <div className="flex min-h-[31rem] flex-col justify-end gap-4 px-4 py-5 sm:px-5">
+        <div className="flex min-h-124 flex-col justify-end gap-4 px-4 py-5 sm:px-5">
           <AnimatePresence initial={false} mode="popLayout">
             {shown.slice(-6).map((item) => (
               <DemoBubble key={item.id} item={item} />
@@ -170,8 +170,8 @@ export function ChatDemo() {
           </AnimatePresence>
         </div>
 
-        <div className="border-t border-white/[0.06] bg-[#080808]/80 p-4 backdrop-blur-xl">
-          <div className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#141414] p-1.5 pl-4">
+        <div className="border-t border-white/6 bg-[#080808]/80 p-4 backdrop-blur-xl">
+          <div className="flex items-center gap-2 rounded-full border border-white/8 bg-[#141414] p-1.5 pl-4">
             <span className="min-w-0 flex-1 text-left text-sm text-[#6B6B6B]">
               Type your answer...
             </span>

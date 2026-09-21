@@ -5,12 +5,13 @@ import { Sparkles } from "lucide-react";
 import { ScrollReveal } from "./scroll-reveal";
 import { LandingButton } from "./landing-button";
 
+function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+}
+
 export function FinalCta() {
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  }
 
   return (
     <section className="px-4 pb-24 pt-8 relative">

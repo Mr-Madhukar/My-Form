@@ -68,7 +68,7 @@ export function FloatingFields() {
             }}
             className={`pointer-events-none absolute z-10 hidden select-none md:flex ${orb.position}`}
           >
-            <div className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-[#111]/80 px-3 py-2 text-xs text-[#6B6B6B] backdrop-blur-sm">
+            <div className="flex items-center gap-2 rounded-2xl border border-white/8 bg-[#111]/80 px-3 py-2 text-xs text-[#6B6B6B] backdrop-blur-sm">
               <Icon className="size-3.5 text-[#E8854A]" />
               <span className="font-mono text-[10px] uppercase tracking-wider">{orb.label}</span>
             </div>
