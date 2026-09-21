@@ -26,11 +26,11 @@ export const metadata: Metadata = {
   description: "Build and share forms in minutes",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { readonly children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      className={cn(geistSans.variable, geistHeading.variable, geistMono.variable)}
+      className={cn("dark", geistSans.variable, geistHeading.variable, geistMono.variable)}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>

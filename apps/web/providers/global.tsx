@@ -31,6 +31,8 @@ export const GlobalProviders: React.FC<{ children: React.ReactNode }> = ({ child
       <NextThemesProvider
         attribute="class"
         defaultTheme="dark"
+        forcedTheme="dark"
+        enableSystem={false}
         disableTransitionOnChange
       >
         <trpc.Provider queryClient={queryClient} client={trpcClient}>

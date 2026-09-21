@@ -10,8 +10,6 @@ import {
   Inbox,
   Layers,
   Loader2,
-  Sun,
-  Moon,
   Search,
   Compass,
   FileText,
@@ -25,7 +23,6 @@ import {
   GraduationCap,
   Check,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { Button } from "~/components/ui/button";
 import { trpc } from "~/trpc/client";
 import { cn } from "~/lib/utils";
@@ -720,7 +717,6 @@ function CardSkeleton({ index }: { readonly index: number }) {
 export default function ExplorePage() {
   const { user, isLoading: authLoading } = useAuthStore();
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
 
   // Navigation tabs: templates vs community
   const [activeTab, setActiveTab] = useState<"templates" | "community">("templates");
@@ -916,17 +912,6 @@ export default function ExplorePage() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              {mounted && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Toggle theme"
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="rounded-full text-[#6B6B6B] hover:bg-white/6 hover:text-[#F2F2F2] size-8 shrink-0 cursor-pointer"
-                >
-                  {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-                </Button>
-              )}
               {navAuthSection}
             </div>
           </div>

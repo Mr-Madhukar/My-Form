@@ -1,9 +1,6 @@
 "use client";
 
-import { useTheme } from "next-themes";
-import { Sun, Moon } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
-import { Button } from "~/components/ui/button";
 
 type AdminHeaderNavProps = {
   readonly user: {
@@ -13,8 +10,6 @@ type AdminHeaderNavProps = {
 };
 
 export function AdminHeaderNav({ user }: AdminHeaderNavProps) {
-  const { theme, setTheme } = useTheme();
-
   const initials = user.fullName
     .split(" ")
     .map((n) => n[0])
@@ -24,15 +19,6 @@ export function AdminHeaderNav({ user }: AdminHeaderNavProps) {
 
   return (
     <div className="flex items-center gap-2.5">
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        aria-label="Toggle theme"
-        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        className="text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
-      >
-        {theme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-      </Button>
 
       <div className="flex items-center gap-2 pl-2 border-l border-zinc-800/80">
         <Avatar className="size-7 ring-1 ring-amber-500/40">

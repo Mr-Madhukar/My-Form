@@ -189,42 +189,47 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #FDFBF7;
-  --foreground: #1E1B18;
-  --card: #F7F4EB;
-  --card-foreground: #1E1B18;
-  --popover: #F7F4EB;
-  --popover-foreground: #1E1B18;
-  --primary: #E8854A;
-  --primary-foreground: #FDFBF7;
-  --secondary: #EFECE5;
-  --secondary-foreground: #1E1B18;
-  --muted: #EFECE5;
-  --muted-foreground: #7C766D;
-  --accent: #E8854A;
-  --accent-foreground: #FDFBF7;
-  --destructive: #EF4444;
-  --border: #E8E2D5;
-  --input: #E8E2D5;
-  --ring: #E8854A;
-  --sidebar: #F7F4EB;
-  --sidebar-foreground: #5C564D;
-  --sidebar-primary: #E8854A;
-  --sidebar-primary-foreground: #FDFBF7;
-  --sidebar-accent: #EFECE5;
-  --sidebar-accent-foreground: #1E1B18;
-  --sidebar-border: #E8E2D5;
-  --sidebar-ring: #E8854A;
-  --destructive-foreground: var(--color-red-700);
+  --background: color-mix(in srgb, var(--color-neutral-950) 95%, var(--color-white));
+  --foreground: var(--color-neutral-100);
+  --card: color-mix(in srgb, var(--background) 98%, var(--color-white));
+  --card-foreground: var(--color-neutral-100);
+  --popover: color-mix(in srgb, var(--background) 98%, var(--color-white));
+  --popover-foreground: var(--color-neutral-100);
+  --primary: var(--color-neutral-100);
+  --primary-foreground: var(--color-neutral-800);
+  --secondary: --alpha(var(--color-white) / 4%);
+  --secondary-foreground: var(--color-neutral-100);
+  --muted: --alpha(var(--color-white) / 4%);
+  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
+  --accent: --alpha(var(--color-white) / 4%);
+  --accent-foreground: var(--color-neutral-100);
+  --destructive: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
+  --border: --alpha(var(--color-white) / 6%);
+  --input: --alpha(var(--color-white) / 8%);
+  --ring: var(--color-neutral-500);
+  --chart-1: var(--color-blue-700);
+  --chart-2: var(--color-emerald-500);
+  --chart-3: var(--color-amber-500);
+  --chart-4: var(--color-purple-500);
+  --chart-5: var(--color-rose-500);
+  --sidebar: #080808;
+  --sidebar-foreground: color-mix(in srgb, var(--color-neutral-100) 64%, var(--sidebar));
+  --sidebar-primary: var(--color-neutral-100);
+  --sidebar-primary-foreground: var(--color-neutral-800);
+  --sidebar-accent: --alpha(var(--color-white) / 4%);
+  --sidebar-accent-foreground: var(--color-neutral-100);
+  --sidebar-border: --alpha(var(--color-white) / 5%);
+  --sidebar-ring: var(--color-neutral-400);
+  --destructive-foreground: var(--color-red-400);
   --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-700);
+  --info-foreground: var(--color-blue-400);
   --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-700);
+  --success-foreground: var(--color-emerald-400);
   --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-700);
-  --code: #F7F4EB;
-  --code-foreground: #1E1B18;
-  --code-highlight: rgba(232, 133, 74, 0.08);
+  --warning-foreground: var(--color-amber-400);
+  --code: color-mix(in srgb, var(--background) 98%, var(--color-white));
+  --code-foreground: var(--foreground);
+  --code-highlight: --alpha(var(--color-white) / 4%);
 }
 
 .dark {
@@ -271,131 +276,6 @@
   --code-highlight: --alpha(var(--color-white) / 4%);
 }
 
-/* Premium Light Mode Overrides (Cream & Espresso & Orange theme) */
-html:not(.dark):not(.homepage-dark) {
-  .bg-\[\#080808\],
-  [class*="bg-[#080808]"],
-  .bg-\[\#050505\],
-  [class*="bg-[#050505]"],
-  .bg-\[\#080808\]\/70,
-  .bg-\[\#080808\]\/80 {
-    background-color: var(--background) !important;
-  }
-
-  .bg-\[\#111\],
-  [class*="bg-[#111]"],
-  .bg-\[\#0d0d0d\],
-  [class*="bg-[#0d0d0d]"],
-  .bg-\[\#0f0e0d\],
-  [class*="bg-[#0f0e0d]"],
-  .bg-\[\#0d0d0d\]\/80,
-  .bg-\[\#111\]\/80 {
-    background-color: var(--card) !important;
-  }
-
-  .bg-zinc-950 {
-    background-color: var(--card) !important;
-  }
-
-  .bg-zinc-900,
-  .bg-zinc-900\/20,
-  .bg-zinc-900\/40,
-  .bg-zinc-900\/60,
-  .bg-zinc-900\/30 {
-    background-color: var(--secondary) !important;
-  }
-
-  .bg-white\/1,
-  .bg-white\/2,
-  .bg-white\/3,
-  .bg-white\/4,
-  .bg-white\/5,
-  .bg-white\/6,
-  .bg-white\/8 {
-    background-color: rgba(30, 27, 24, 0.04) !important; /* Espresso 4% */
-  }
-
-  .hover\:bg-white\/4:hover,
-  .hover\:bg-white\/6:hover,
-  .hover\:bg-white\/8:hover,
-  .hover\:bg-zinc-900\/40:hover {
-    background-color: rgba(30, 27, 24, 0.08) !important; /* Espresso 8% */
-  }
-
-  .text-\[\#F2F2F2\],
-  [class*="text-[#F2F2F2]"],
-  .text-white,
-  .text-zinc-200,
-  .text-zinc-100 {
-    color: var(--foreground) !important;
-  }
-
-  /* Force white text back for orange buttons */
-  .bg-\[\#E8854A\] .text-white,
-  .bg-\[\#E8854A\] *,
-  .bg-primary .text-white,
-  .bg-primary * {
-    color: #FDFBF7 !important;
-  }
-  .rounded-full.bg-\[\#E8854A\] {
-    color: #FDFBF7 !important;
-  }
-
-  .text-\[\#6B6B6B\],
-  [class*="text-[#6B6B6B]"],
-  .text-\[\#5A5A5A\],
-  [class*="text-[#5A5A5A]"],
-  .text-\[\#4A4A4A\],
-  [class*="text-[#4A4A4A]"],
-  .text-zinc-400,
-  .text-zinc-500 {
-    color: var(--muted-foreground) !important;
-  }
-
-  .border-white\/1,
-  .border-white\/2,
-  .border-white\/6,
-  .border-white\/7,
-  .border-white\/8,
-  .border-white\/\[0\.01\],
-  .border-white\/\[0\.02\],
-  .border-white\/\[0\.03\],
-  .border-white\/\[0\.06\],
-  .border-white\/\[0\.07\],
-  .border-white\/\[0\.08\],
-  .border-zinc-800\/40,
-  .border-zinc-900,
-  .border-zinc-700\/60,
-  .border-zinc-800\/60,
-  .border-zinc-800\/80,
-  .border-white\/\[0\.07\] {
-    border-color: var(--border) !important;
-  }
-
-  .ring-white\/6,
-  .ring-zinc-800 {
-    --tw-ring-color: var(--border) !important;
-  }
-
-  .bg-linear-to-t.from-\[\#080808\].to-transparent {
-    background-image: linear-gradient(to top, var(--background), transparent) !important;
-  }
-  .bg-linear-to-t.from-\[\#111\].via-\[\#111\/90\].to-transparent {
-    background-image: linear-gradient(to top, var(--background), rgba(253, 251, 247, 0.9), transparent) !important;
-  }
-
-  /* Invert white text in logo while preserving orange icon */
-  img[src*="logo"],
-  .logo-img {
-    filter: invert(1) hue-rotate(180deg) !important;
-  }
-
-  ::selection {
-    background-color: rgba(232, 133, 74, 0.2) !important;
-    color: var(--foreground) !important;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .animate-bubble-in-left,
   .animate-bubble-in-right,
@@ -407,15 +287,17 @@ html:not(.dark):not(.homepage-dark) {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
+    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
   }
   code, kbd, samp, pre {
     font-family: var(--font-mono);
   }
   html {
-    @apply font-sans font-mono;
+    font-family: var(--font-sans);
   }
 }

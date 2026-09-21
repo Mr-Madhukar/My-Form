@@ -1,26 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
 import { useAuthStore } from "~/stores/auth";
 import { Button } from "~/components/ui/button";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import {
   User,
-  Sun,
-  Moon,
   Bell,
   Keyboard,
-  ShieldAlert,
-  Info,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogTitle,
-} from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
 import { toast } from "sonner";
 
@@ -35,12 +23,8 @@ function getInitials(name: string) {
 
 export default function SettingsPage() {
   const { user, isLoading: authLoading } = useAuthStore();
-  const { theme, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<"account" | "appearance" | "notifications" | "keybinds">("account");
+  const [activeTab, setActiveTab] = useState<"account" | "notifications" | "keybinds">("account");
   const [mounted, setMounted] = useState(false);
-
-  // Light mode alert dialog state
-  const [lightModeWarningOpen, setLightModeWarningOpen] = useState(false);
 
   // Notifications toggles
   const [emailSubmissions, setEmailSubmissions] = useState(true);
@@ -55,25 +39,9 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: "account", label: "My Account", icon: User },
-    { id: "appearance", label: "Appearance", icon: Moon },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "keybinds", label: "Keyboard Shortcuts", icon: Keyboard },
   ] as const;
-
-  const handleThemeChange = (newTheme: "dark" | "light" | "system") => {
-    if (newTheme === "light") {
-      setLightModeWarningOpen(true);
-    } else {
-      setTheme(newTheme);
-      toast.success(`Theme changed to ${newTheme}`);
-    }
-  };
-
-  const confirmLightMode = () => {
-    setTheme("light");
-    setLightModeWarningOpen(false);
-    toast.warning("Light mode enabled. Keep some sunglasses nearby! 😎");
-  };
 
   const handleSaveNotifications = () => {
     toast.success("Notification preferences updated successfully");
@@ -169,63 +137,7 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* 2. APPEARANCE TAB */}
-            {activeTab === "appearance" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-white">App Theme</h3>
-                  <p className="text-xs text-zinc-500 mt-1">Select your preferred display theme for the forms workspace.</p>
-                </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    onClick={() => handleThemeChange("dark")}
-                    className={cn(
-                      "flex flex-col items-center gap-3 rounded-xl border p-4.5 bg-zinc-950/40 cursor-pointer transition-all hover:bg-zinc-950/80",
-                      theme === "dark" ? "border-[#E8854A] ring-1 ring-[#E8854A]/20" : "border-white/5 text-zinc-500"
-                    )}
-                  >
-                    <Moon className={cn("size-6", theme === "dark" && "text-[#E8854A]")} />
-                    <span className="text-xs font-semibold text-zinc-300">Dark Mode</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleThemeChange("light")}
-                    className={cn(
-                      "flex flex-col items-center gap-3 rounded-xl border p-4.5 bg-zinc-950/40 cursor-pointer transition-all hover:bg-zinc-950/80",
-                      theme === "light" ? "border-[#E8854A] ring-1 ring-[#E8854A]/20" : "border-white/5 text-zinc-500"
-                    )}
-                  >
-                    <Sun className={cn("size-6", theme === "light" && "text-[#E8854A]")} />
-                    <span className="text-xs font-semibold text-zinc-300">Light Mode</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleThemeChange("system")}
-                    className={cn(
-                      "flex flex-col items-center gap-3 rounded-xl border p-4.5 bg-zinc-950/40 cursor-pointer transition-all hover:bg-zinc-950/80",
-                      theme === "system" ? "border-[#E8854A] ring-1 ring-[#E8854A]/20" : "border-white/5 text-zinc-500"
-                    )}
-                  >
-                    <div className="flex gap-0.5">
-                      <Sun className="size-5 text-zinc-500" />
-                      <Moon className="size-5 text-zinc-500" />
-                    </div>
-                    <span className="text-xs font-semibold text-zinc-300">System Default</span>
-                  </button>
-                </div>
-
-                <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-4 flex gap-3">
-                  <Info className="size-5 text-amber-500 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-amber-400">OLED Dark Aesthetics</p>
-                    <p className="text-[11px] leading-relaxed text-zinc-400">
-                      My Form is designed natively with high-end dark backgrounds to minimize eye fatigue during form customization.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* 3. NOTIFICATIONS TAB */}
             {activeTab === "notifications" && (
@@ -364,37 +276,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Light Mode Warning Dialog */}
-      <Dialog open={lightModeWarningOpen} onOpenChange={setLightModeWarningOpen}>
-        <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800 text-zinc-100 p-0 overflow-hidden gap-0">
-          <div className="relative p-6 pt-7 pb-5 border-b border-zinc-800 flex gap-4">
-            <div className="size-11 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
-              <ShieldAlert className="size-5 text-red-500 animate-pulse" />
-            </div>
-            <div>
-              <DialogTitle className="text-base font-bold text-white tracking-tight">Warning: Eye Hazard!</DialogTitle>
-              <DialogDescription className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
-                You are about to enable Light Mode. Studies show that sudden exposure to highly bright, default white screens can cause intense glare and mild temporary discomfort.
-              </DialogDescription>
-            </div>
-          </div>
-          <DialogFooter className="p-4 bg-zinc-900/30 gap-2 border-t border-zinc-800">
-            <Button
-              variant="outline"
-              onClick={() => setLightModeWarningOpen(false)}
-              className="border-zinc-800 text-zinc-400 hover:bg-zinc-900 text-xs rounded-xl"
-            >
-              Cancel (Go Back to Comfort)
-            </Button>
-            <Button
-              onClick={confirmLightMode}
-              className="bg-red-600 hover:bg-red-500 text-xs font-semibold text-white rounded-xl"
-            >
-              Enable Anyway
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }

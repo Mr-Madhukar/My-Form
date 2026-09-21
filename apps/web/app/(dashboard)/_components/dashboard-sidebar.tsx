@@ -15,11 +15,8 @@ import {
   Settings,
   Copy,
   Check,
-  Sun,
-  Moon,
   ShieldCheck,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { trpc } from "~/trpc/client";
 import { useAuthStore } from "~/stores/auth";
 import { cn } from "~/lib/utils";
@@ -97,12 +94,7 @@ function DashboardSidebarContent() {
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
 
-  const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const updateWorkspace = trpc.workspaces.update.useMutation({
     onSuccess: (updated) => {
@@ -246,22 +238,7 @@ function DashboardSidebarContent() {
               </div>
 
               <div className="flex items-center gap-1">
-                {mounted && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Toggle theme"
-                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                        className="shrink-0 text-zinc-500 hover:text-zinc-200 hover:bg-white/6"
-                      >
-                        {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{theme === "dark" ? "Light mode" : "Dark mode"}</TooltipContent>
-                  </Tooltip>
-                )}
+
 
                 <Tooltip>
                   <TooltipTrigger asChild>
