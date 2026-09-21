@@ -17,6 +17,7 @@ import {
   Check,
   Sun,
   Moon,
+  ShieldCheck,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { trpc } from "~/trpc/client";
@@ -55,7 +56,11 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
-function CopyButton({ value }: { value: string }) {
+type CopyButtonProps = {
+  readonly value: string;
+};
+
+function CopyButton({ value }: Readonly<CopyButtonProps>) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -123,6 +128,9 @@ function DashboardSidebarContent() {
     { href: "/billing", label: "Plan & Billing", icon: CreditCard },
     { href: "/help", label: "Help & Support", icon: HelpCircle },
     { href: "/settings", label: "Settings", icon: Settings },
+    ...(user?.role === "admin"
+      ? [{ href: "/admin", label: "Admin Console", icon: ShieldCheck, isAdmin: true }]
+      : []),
   ];
 
   return (

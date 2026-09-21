@@ -1,9 +1,9 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { OpenApiMeta } from "trpc-to-openapi";
 import { z } from "zod";
-import { eq, and } from "@repo/database";
-import { workspaceMembersTable, formsTable } from "@repo/database/schema";
-import db from "@repo/database";
+import db, { eq, and } from "@repo/database";
+import { workspaceMembersTable, formsTable, usersTable } from "@repo/database/schema";
+import { isSuperAdminEmail } from "./services";
 
 import { createContext } from "./context";
 
@@ -23,8 +23,31 @@ export const authedProcedure = publicProcedure.use(({ ctx, next }) => {
 // kept for backward compat with auth routes
 export const protectedProcedure = authedProcedure;
 
+export const adminProcedure = authedProcedure.use(async ({ ctx, next }) => {
+  const [user] = await db
+    .select({ role: usersTable.role, email: usersTable.email, isBanned: usersTable.isBanned })
+    .from(usersTable)
+    .where(eq(usersTable.id, ctx.userId))
+    .limit(1);
+
+  if (!user || user.isBanned) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Account suspended or not found" });
+  }
+
+  const isSuperAdmin = user.role === "admin" || isSuperAdminEmail(user.email);
+  if (!isSuperAdmin) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Super admin access required" });
+  }
+
+  if (user.role !== "admin") {
+    await db.update(usersTable).set({ role: "admin" }).where(eq(usersTable.id, ctx.userId));
+  }
+
+  return next({ ctx: { ...ctx, userRole: "admin" } });
+});
+
 export const workspaceProcedure = authedProcedure
-  .input(z.object({ workspaceId: z.string().uuid() }))
+  .input(z.object({ workspaceId: z.uuid() }))
   .use(async ({ ctx, input, next }) => {
     const [member] = await db
       .select()
@@ -43,7 +66,7 @@ export const workspaceProcedure = authedProcedure
   });
 
 export const formProcedure = authedProcedure
-  .input(z.object({ formId: z.string().uuid() }))
+  .input(z.object({ formId: z.uuid() }))
   .use(async ({ ctx, input, next }) => {
     const [form] = await db
       .select()

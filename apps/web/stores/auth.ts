@@ -6,7 +6,9 @@ export interface AuthUser {
   email: string;
   emailVerified: boolean | null;
   profileImageUrl: string | null;
-  createdAt: string | null;
+  role?: string;
+  isBanned?: boolean;
+  createdAt: string | Date | null;
 }
 
 interface AuthState {

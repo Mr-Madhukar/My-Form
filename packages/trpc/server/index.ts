@@ -7,6 +7,7 @@ import { formsRouter } from "./routes/forms/route";
 import { analyticsRouter } from "./routes/analytics/route";
 import { dashboardRouter } from "./routes/dashboard/route";
 import { billingRouter } from "./routes/billing/route";
+import { adminRouter } from "./routes/admin/route";
 
 export const serverRouter = router({
   health: healthRouter,
@@ -16,6 +17,7 @@ export const serverRouter = router({
   analytics: analyticsRouter,
   dashboard: dashboardRouter,
   billing: billingRouter,
+  admin: adminRouter,
 });
 
 export { createContext } from "./context";

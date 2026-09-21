@@ -71,6 +71,13 @@
       "when": 1783479850290,
       "tag": "0009_blushing_nightmare",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789980427580,
+      "tag": "0010_nasty_switch",
+      "breakpoints": true
     }
   ]
 }

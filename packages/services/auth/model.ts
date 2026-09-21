@@ -15,6 +15,9 @@ export const meOutputSchema = z.object({
     .string()
     .nullable()
     .describe("URL to the user's profile picture, null if not set"),
+  role: z.string().describe("User's role: user or admin"),
+  isBanned: z.boolean().describe("Whether the user account is suspended"),
   createdAt: z.date().describe("Timestamp when the user account was created"),
 });
 export type MeOutput = z.infer<typeof meOutputSchema>;
+

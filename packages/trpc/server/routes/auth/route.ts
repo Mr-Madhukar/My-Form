@@ -86,6 +86,7 @@ function mapError(err: unknown): TRPCError {
     GOOGLE_NO_EMAIL: { code: "BAD_REQUEST", message: "Google account has no email address." },
     NO_PASSWORD_SET: { code: "BAD_REQUEST", message: "No password set for this account. You signed in with OAuth." },
     INVALID_TEMP_CODE: { code: "BAD_REQUEST", message: "Google sign-in session expired or invalid. Please try again." },
+    ACCOUNT_BANNED: { code: "FORBIDDEN", message: "Your account has been suspended. Please contact support." },
   };
   const mapped = map[msg];
   if (mapped) return new TRPCError(mapped);
@@ -98,6 +99,8 @@ const userOutputSchema = z.object({
   email: z.string(),
   emailVerified: z.boolean().nullable(),
   profileImageUrl: z.string().nullable(),
+  role: z.string().default("user"),
+  isBanned: z.boolean().default(false),
   createdAt: z.date().nullable(),
 });
 
@@ -114,7 +117,7 @@ export const authRouter = router({
     .meta({ openapi: { method: "POST", path: getPath("/signup"), tags: TAGS } })
     .input(
       z.object({
-        email: z.string().email(),
+        email: z.email(),
         password: z.string().min(8),
         fullName: z.string().min(1).max(80),
       }),
@@ -152,7 +155,7 @@ export const authRouter = router({
     .meta({ openapi: { method: "POST", path: getPath("/login"), tags: TAGS } })
     .input(
       z.object({
-        email: z.string().email(),
+        email: z.email(),
         password: z.string(),
       }),
     )
@@ -232,7 +235,7 @@ export const authRouter = router({
 
   forgotPassword: publicProcedure
     .meta({ openapi: { method: "POST", path: getPath("/forgot-password"), tags: TAGS } })
-    .input(z.object({ email: z.string().email() }))
+    .input(z.object({ email: z.email() }))
     .output(z.object({ message: z.string() }))
     .mutation(async ({ input }) => {
       await authService.forgotPassword(input.email);

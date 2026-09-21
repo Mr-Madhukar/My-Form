@@ -1,10 +1,8 @@
-import { eq } from "@repo/database";
+import db, { eq } from "@repo/database";
 import { workspaceMembersTable, workspacesTable } from "@repo/database/schema";
-import db from "@repo/database";
 import { withCache, invalidateKeys, CacheKeys } from "@repo/services/redis";
-import { z } from "../../schema";
+import { z, zodUndefinedModel } from "../../schema";
 import { authedProcedure, workspaceProcedure, router } from "../../trpc";
-import { zodUndefinedModel } from "../../schema";
 
 const workspaceOutputSchema = z.object({
   id: z.string(),
@@ -36,7 +34,7 @@ export const workspacesRouter = router({
 
   get: workspaceProcedure
     .meta({ openapi: { method: "GET", path: "/workspaces/{workspaceId}", tags: TAGS } })
-    .input(z.object({ workspaceId: z.string().uuid() }))
+    .input(z.object({ workspaceId: z.uuid() }))
     .output(workspaceOutputSchema)
     .query(async ({ ctx }) => {
       const [workspace] = await db
@@ -53,7 +51,7 @@ export const workspacesRouter = router({
 
   update: workspaceProcedure
     .meta({ openapi: { method: "PATCH", path: "/workspaces/{workspaceId}", tags: TAGS } })
-    .input(z.object({ workspaceId: z.string().uuid(), name: z.string().min(1).max(100) }))
+    .input(z.object({ workspaceId: z.uuid(), name: z.string().min(1).max(100) }))
     .output(workspaceOutputSchema)
     .mutation(async ({ ctx, input }) => {
       const [updated, members] = await Promise.all([

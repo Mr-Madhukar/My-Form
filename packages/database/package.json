@@ -11,18 +11,21 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/pg": "^8.16.0",
+    "@types/ws": "^8.18.1",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.8",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@repo/forms": "workspace:*",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "nanoid": "^5.1.5",
     "pg": "^8.16.3",
+    "ws": "^8.21.3",
     "zod": "^4.3.5"
   }
 }

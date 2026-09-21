@@ -10,6 +10,9 @@ export const usersTable = pgTable("users", {
 
   profileImageUrl: text("profile_image_url"),
 
+  role: varchar("role", { length: 20 }).notNull().default("user"),
+  isBanned: boolean("is_banned").notNull().default(false),
+
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 });

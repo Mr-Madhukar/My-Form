@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db, eq, and, isNull } from "@repo/database";
 import {
@@ -15,6 +15,18 @@ import { tokenService } from "../token";
 import { emailService } from "../email";
 import { type AuthTokens, type MeOutput } from "./model";
 
+const DEFAULT_ADMIN_EMAILS = new Set([
+  "madhukar212005@gmail.com",
+  "mrmadhukarjii@gmail.com",
+]);
+
+export function isSuperAdminEmail(email: string): boolean {
+  const normalized = email.trim().toLowerCase();
+  if (DEFAULT_ADMIN_EMAILS.has(normalized)) return true;
+  const envAdmins = process.env.ADMIN_EMAILS?.split(",").map((e) => e.trim().toLowerCase()) ?? [];
+  return envAdmins.includes(normalized);
+}
+
 class AuthService {
   private async createPersonalWorkspace(userId: string, fullName: string): Promise<void> {
     const [workspace] = await db
@@ -27,6 +39,15 @@ class AuthService {
   }
 
   private async issueTokens(userId: string): Promise<AuthTokens> {
+    const [user] = await db
+      .select({ isBanned: usersTable.isBanned })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    if (user?.isBanned) {
+      throw new Error("ACCOUNT_BANNED");
+    }
+
     const accessToken = tokenService.createAccessToken(userId);
     const refreshToken = await tokenService.createRefreshToken(userId);
     return { accessToken, refreshToken };
@@ -43,11 +64,12 @@ class AuthService {
 
     const passwordHash = await bcrypt.hash(password, 12);
     let userId: string;
+    const role = isSuperAdminEmail(email) ? "admin" : "user";
 
     await db.transaction(async (tx) => {
       const [user] = await tx
         .insert(usersTable)
-        .values({ email, fullName, emailVerified: true })
+        .values({ email, fullName, emailVerified: true, role })
         .returning({ id: usersTable.id });
       userId = user!.id;
 
@@ -99,6 +121,11 @@ class AuthService {
 
     if (!user) throw new Error("INVALID_CREDENTIALS");
     if (!user.emailVerified) throw new Error("EMAIL_NOT_VERIFIED");
+    if (user.isBanned) throw new Error("ACCOUNT_BANNED");
+
+    if (isSuperAdminEmail(email) && user.role !== "admin") {
+      await db.update(usersTable).set({ role: "admin" }).where(eq(usersTable.id, user.id));
+    }
 
     const [credential] = await db
       .select()
@@ -135,6 +162,9 @@ class AuthService {
       .limit(1);
 
     if (oauthAccount) {
+      if (isSuperAdminEmail(email)) {
+        await db.update(usersTable).set({ role: "admin" }).where(eq(usersTable.id, oauthAccount.userId));
+      }
       return this.issueTokens(oauthAccount.userId);
     }
 
@@ -149,11 +179,19 @@ class AuthService {
 
     if (existingUser) {
       userId = existingUser.id;
+      const updateData: Record<string, unknown> = {
+        emailVerified: true,
+        profileImageUrl: picture ?? existingUser.profileImageUrl,
+      };
+      if (isSuperAdminEmail(email)) {
+        updateData.role = "admin";
+      }
       await db
         .update(usersTable)
-        .set({ emailVerified: true, profileImageUrl: picture ?? existingUser.profileImageUrl })
+        .set(updateData)
         .where(eq(usersTable.id, userId));
     } else {
+      const role = isSuperAdminEmail(email) ? "admin" : "user";
       const insertedNewUsers = await db
         .insert(usersTable)
         .values({
@@ -161,6 +199,7 @@ class AuthService {
           fullName: name ?? email,
           emailVerified: true,
           profileImageUrl: picture,
+          role,
         })
         .returning({ id: usersTable.id });
       userId = insertedNewUsers[0]!.id;
@@ -264,6 +303,8 @@ class AuthService {
         email: usersTable.email,
         emailVerified: usersTable.emailVerified,
         profileImageUrl: usersTable.profileImageUrl,
+        role: usersTable.role,
+        isBanned: usersTable.isBanned,
         createdAt: usersTable.createdAt,
       })
       .from(usersTable)
@@ -271,6 +312,13 @@ class AuthService {
       .limit(1);
 
     if (!user) throw new Error("USER_NOT_FOUND");
+    if (user.isBanned) throw new Error("ACCOUNT_BANNED");
+
+    if (isSuperAdminEmail(user.email) && user.role !== "admin") {
+      await db.update(usersTable).set({ role: "admin" }).where(eq(usersTable.id, user.id));
+      user.role = "admin";
+    }
+
     return user;
   }
 

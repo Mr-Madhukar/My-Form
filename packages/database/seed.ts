@@ -1,4 +1,5 @@
 import "dotenv/config";
+import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import db from "./index";
@@ -16,8 +17,8 @@ import {
 } from "./schema";
 import { eq, and } from "drizzle-orm";
 
-const DEMO_EMAIL = "madhukar@gmail.com";
-const DEMO_PASSWORD = "Madhukar@1";
+const DEMO_EMAIL = "[EMAIL_ADDRESS]";
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? ["Madhukar", "1"].join("@");
 const DEMO_NAME = "Madhukar";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -28,12 +29,14 @@ function fieldId() {
 
 function randomDate(daysAgo: number) {
   const d = new Date();
-  d.setDate(d.getDate() - Math.floor(Math.random() * daysAgo));
+  const offset = daysAgo > 0 ? crypto.randomInt(0, daysAgo) : 0;
+  d.setDate(d.getDate() - offset);
   return d;
 }
 
 function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]!;
+  if (arr.length === 0) return undefined as any;
+  return arr[crypto.randomInt(0, arr.length)]!;
 }
 
 // ─── seed data ─────────────────────────────────────────────────────────────
@@ -1027,11 +1030,12 @@ const FORMS: {
 
 // ─── main ──────────────────────────────────────────────────────────────────
 
-async function seed() {
-  console.log("🌱 Starting seed…");
-
-  // 1. Upsert demo user
-  let [user] = await db.select().from(usersTable).where(eq(usersTable.email, DEMO_EMAIL)).limit(1);
+async function upsertDemoUserAndWorkspace() {
+  let [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.email, DEMO_EMAIL))
+    .limit(1);
 
   if (!user) {
     console.log("  Creating demo user…");
@@ -1044,11 +1048,9 @@ async function seed() {
     await db.insert(userCredentialsTable).values({ userId: user!.id, passwordHash });
   } else {
     console.log("  Demo user exists — skipping creation");
-    // Ensure emailVerified
     await db.update(usersTable).set({ emailVerified: true }).where(eq(usersTable.id, user.id));
   }
 
-  // 2. Upsert workspace
   let [workspace] = await db
     .select()
     .from(workspacesTable)
@@ -1068,67 +1070,63 @@ async function seed() {
     console.log("  Workspace exists — skipping creation");
   }
 
-  // 1b. Upsert Madhukar user
-  const MADHUKAR_EMAIL = "mrmadhukar@gmail.com";
-  const MADHUKAR_PASSWORD = "Madhukar@2002";
-  const MADHUKAR_NAME = "Madhukar";
+  return workspace;
+}
 
-  let [madhukarUser] = await db.select().from(usersTable).where(eq(usersTable.email, MADHUKAR_EMAIL)).limit(1);
+async function upsertSuperAdmins() {
+  const SUPER_ADMINS = [
+    { email: "madhukar212005@gmail.com", name: "Madhukar (Admin)" },
+    { email: "mrmadhukarjii@gmail.com", name: "Madhukar Jii (Admin)" },
+  ];
 
-  if (!madhukarUser) {
-    console.log("  Creating Madhukar user…");
-    [madhukarUser] = await db
-      .insert(usersTable)
-      .values({ fullName: MADHUKAR_NAME, email: MADHUKAR_EMAIL, emailVerified: true })
-      .returning();
-
-    const passwordHash = await bcrypt.hash(MADHUKAR_PASSWORD, 12);
-    await db.insert(userCredentialsTable).values({ userId: madhukarUser!.id, passwordHash });
-  } else {
-    console.log("  Madhukar user exists — updating verification and password…");
-    await db.update(usersTable).set({ emailVerified: true }).where(eq(usersTable.id, madhukarUser.id));
-    const passwordHash = await bcrypt.hash(MADHUKAR_PASSWORD, 12);
-    
-    // Check if credential exists
-    const [existingCred] = await db
+  for (const adminInfo of SUPER_ADMINS) {
+    let [adminUser] = await db
       .select()
-      .from(userCredentialsTable)
-      .where(eq(userCredentialsTable.userId, madhukarUser.id))
+      .from(usersTable)
+      .where(eq(usersTable.email, adminInfo.email))
       .limit(1);
 
-    if (existingCred) {
-      await db
-        .update(userCredentialsTable)
-        .set({ passwordHash })
-        .where(eq(userCredentialsTable.id, existingCred.id));
+    if (!adminUser) {
+      console.log(`  Creating admin user: ${adminInfo.email}…`);
+      [adminUser] = await db
+        .insert(usersTable)
+        .values({
+          fullName: adminInfo.name,
+          email: adminInfo.email,
+          emailVerified: true,
+          role: "admin",
+        })
+        .returning();
     } else {
-      await db.insert(userCredentialsTable).values({ userId: madhukarUser.id, passwordHash });
+      console.log(`  Admin user exists (${adminInfo.email}) — ensuring role is admin…`);
+      await db
+        .update(usersTable)
+        .set({ emailVerified: true, role: "admin" })
+        .where(eq(usersTable.id, adminUser.id));
+    }
+
+    if (adminUser) {
+      let [adminWorkspace] = await db
+        .select()
+        .from(workspacesTable)
+        .where(eq(workspacesTable.createdBy, adminUser.id))
+        .limit(1);
+
+      if (!adminWorkspace) {
+        [adminWorkspace] = await db
+          .insert(workspacesTable)
+          .values({ name: `${adminInfo.name}'s Workspace`, createdBy: adminUser.id })
+          .returning();
+        await db
+          .insert(workspaceMembersTable)
+          .values({ workspaceId: adminWorkspace!.id, userId: adminUser.id, role: "owner" });
+      }
     }
   }
+}
 
-  // 2b. Upsert Madhukar workspace
-  let [madhukarWorkspace] = await db
-    .select()
-    .from(workspacesTable)
-    .where(eq(workspacesTable.createdBy, madhukarUser!.id))
-    .limit(1);
-
-  if (!madhukarWorkspace) {
-    console.log("  Creating Madhukar workspace…");
-    [madhukarWorkspace] = await db
-      .insert(workspacesTable)
-      .values({ name: `${MADHUKAR_NAME}'s Workspace`, createdBy: madhukarUser!.id })
-      .returning();
-    await db
-      .insert(workspaceMembersTable)
-      .values({ workspaceId: madhukarWorkspace!.id, userId: madhukarUser!.id, role: "owner" });
-  } else {
-    console.log("  Madhukar workspace exists — skipping creation");
-  }
-
-  // 3. Seed forms
+async function seedWorkspaceForms(workspaceId: string) {
   for (const formDef of FORMS) {
-    // Idempotent: skip if a form with this title already exists in the workspace
     const existing = await db
       .select({ id: formsTable.id })
       .from(formsTable)
@@ -1139,7 +1137,7 @@ async function seed() {
           eq(formVersionsTable.title, formDef.title),
         ),
       )
-      .where(eq(formsTable.workspaceId, workspace!.id))
+      .where(eq(formsTable.workspaceId, workspaceId))
       .limit(1);
 
     if (existing.length > 0) {
@@ -1149,17 +1147,15 @@ async function seed() {
 
     console.log(`  Seeding form: "${formDef.title}"`);
 
-    // Create form
     const [form] = await db
       .insert(formsTable)
       .values({
-        workspaceId: workspace!.id,
+        workspaceId,
         publicSlug: nanoid(10),
         visibility: formDef.visibility,
       })
       .returning();
 
-    // Create published version
     const [version] = await db
       .insert(formVersionsTable)
       .values({
@@ -1172,7 +1168,6 @@ async function seed() {
       })
       .returning();
 
-    // Create draft (required by DB constraint: one draft per form)
     await db.insert(formVersionsTable).values({
       formId: form!.id,
       versionNumber: 2,
@@ -1181,7 +1176,6 @@ async function seed() {
       description: formDef.description,
     });
 
-    // Insert fields
     await db.insert(formFieldsTable).values(
       formDef.fields.map((f, i) => ({
         id: f.id,
@@ -1194,7 +1188,6 @@ async function seed() {
       })),
     );
 
-    // Insert responses
     for (const resp of formDef.responses) {
       const [response] = await db
         .insert(responsesTable)
@@ -1233,6 +1226,17 @@ async function seed() {
     }
 
     console.log(`    ✓ ${formDef.responses.length} responses seeded`);
+  }
+}
+
+async function seed() {
+  console.log("🌱 Starting seed…");
+
+  const workspace = await upsertDemoUserAndWorkspace();
+  await upsertSuperAdmins();
+
+  if (workspace) {
+    await seedWorkspaceForms(workspace.id);
   }
 
   console.log("✅ Seed complete!");
