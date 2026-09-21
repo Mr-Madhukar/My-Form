@@ -16,7 +16,7 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
  * If the backend is not running, all tests in this suite are skipped.
  */
 
-const API_BASE = process.env.E2E_API_BASE || "http://localhost:3001";
+const API_BASE = process.env.E2E_API_BASE || "http://localhost:8123";
 
 /** Quick connectivity check — skip the entire suite if backend is unreachable */
 async function isBackendReachable(): Promise<boolean> {
