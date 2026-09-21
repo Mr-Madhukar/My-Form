@@ -118,9 +118,15 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.70.0(react@19.2.0))
+      '@repo/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@repo/forms':
         specifier: workspace:*
         version: link:../../packages/forms
+      '@repo/services':
+        specifier: workspace:*
+        version: link:../../packages/services
       '@repo/trpc':
         specifier: workspace:*
         version: link:../../packages/trpc

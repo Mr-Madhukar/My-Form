@@ -304,6 +304,7 @@ class AuthService {
         emailVerified: usersTable.emailVerified,
         profileImageUrl: usersTable.profileImageUrl,
         role: usersTable.role,
+        plan: usersTable.plan,
         isBanned: usersTable.isBanned,
         createdAt: usersTable.createdAt,
       })

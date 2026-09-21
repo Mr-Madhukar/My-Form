@@ -21,6 +21,10 @@ function loadRazorpayScript(): Promise<boolean> {
   if ((window as unknown as { Razorpay?: unknown }).Razorpay) return Promise.resolve(true);
 
   return new Promise((resolve) => {
+    const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existing) {
+      existing.remove();
+    }
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
@@ -44,9 +48,9 @@ const plans = [
     ctaDisabled: true,
     highlight: false,
     features: [
-      "3 forms",
-      "50 responses / month",
-      "AI follow-ups (5 per response)",
+      "5 forms",
+      "1,000 responses / month",
+      "AI follow-ups (10 credits)",
       "All question types",
       "Public form links",
       "Basic response dashboard",
@@ -96,12 +100,6 @@ const plans = [
   },
 ];
 
-const usageStats = [
-  { label: "Forms Created", value: 3, max: 5, unit: "forms", icon: FileText },
-  { label: "Monthly Submissions", value: 55, max: 1000, unit: "responses", icon: BarChart3 },
-  { label: "AI Summary Credits", value: 8, max: 10, unit: "runs", icon: Bot },
-];
-
 function handlePlanMouseMove(e: React.MouseEvent<HTMLDivElement>) {
   const rect = e.currentTarget.getBoundingClientRect();
   e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
@@ -139,8 +137,8 @@ function PlanCard({
   let ctaElement: React.ReactNode;
   if (isCurrent) {
     ctaElement = (
-      <div className="flex h-9 w-full items-center justify-center rounded-xl border border-white/8 text-xs font-medium text-[#4A4A4A]">
-        Current plan
+      <div className="flex h-9 w-full items-center justify-center rounded-xl border border-white/8 text-xs font-medium text-emerald-400 bg-emerald-500/5">
+        Current active plan
       </div>
     );
   } else if (plan.highlight) {
@@ -217,8 +215,8 @@ function PlanCard({
 
       {isCurrent && !plan.highlight && (
         <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2">
-          <span className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] font-semibold uppercase tracking-widest text-[#9B9B9B]">
-            Current plan
+          <span className="flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 font-mono text-[9px] font-semibold uppercase tracking-widest text-emerald-400">
+            Active plan
           </span>
         </div>
       )}
@@ -236,8 +234,8 @@ function PlanCard({
             {plan.name}
           </span>
           {plan.highlight && <Zap className="size-3.5 text-[#E8854A]" />}
-          {isCurrent && !plan.highlight && (
-            <span className="rounded-full bg-white/5 px-2 py-0.5 font-mono text-[8px] font-semibold uppercase tracking-widest text-[#4A4A4A]">
+          {isCurrent && (
+            <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 font-mono text-[8px] font-semibold uppercase tracking-widest text-emerald-400">
               Active
             </span>
           )}
@@ -280,9 +278,7 @@ function PlanCard({
         <p className="mt-3 text-[13px] leading-relaxed text-[#6B6B6B]">{plan.description}</p>
 
         {/* CTA */}
-        <div className="mt-5">
-          {ctaElement}
-        </div>
+        <div className="mt-5">{ctaElement}</div>
 
         {/* Divider */}
         <div className="my-5 h-px bg-white/4" />
@@ -312,36 +308,147 @@ function PlanCard({
 export default function BillingPage() {
   const [annual, setAnnual] = useState(false);
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+
+  const utils = trpc.useUtils();
+  const subQuery = trpc.billing.getSubscription.useQuery();
   const createSubscriptionMutation = trpc.billing.createSubscription.useMutation();
+  const verifyPaymentMutation = trpc.billing.verifyPayment.useMutation();
+
+  const currentPlan = subQuery.data?.currentPlan ?? "free";
+  const planTitles: Record<string, string> = {
+    pro: "Pro Plan",
+    team: "Team Workspace",
+    free: "Free Plan",
+  };
+  const currentPlanTitle = planTitles[currentPlan] ?? "Free Plan";
+
+  const planDescriptions: Record<string, string> = {
+    free: "Standard features enabled. Upgrade for unlimited forms & qualitative AI follow-ups.",
+    pro: "Pro features unlocked with unlimited forms and response summaries.",
+    team: "Team collaboration unlocked with priority analytics and webhooks.",
+  };
+  const currentPlanDescription = planDescriptions[currentPlan] ?? planDescriptions.free;
+
+  const usageStats = [
+    {
+      label: "Forms Created",
+      value: subQuery.data?.usage?.formsCreated ?? 0,
+      max: subQuery.data?.usage?.formsMax ?? 5,
+      unit: "forms",
+      icon: FileText,
+    },
+    {
+      label: "Monthly Submissions",
+      value: subQuery.data?.usage?.monthlySubmissions ?? 0,
+      max: subQuery.data?.usage?.monthlySubmissionsMax ?? 1000,
+      unit: "responses",
+      icon: BarChart3,
+    },
+    {
+      label: "AI Summary Credits",
+      value: subQuery.data?.usage?.aiCreditsUsed ?? 0,
+      max: subQuery.data?.usage?.aiCreditsMax ?? 10,
+      unit: "credits",
+      icon: Bot,
+    },
+  ];
 
   async function handleUpgrade(planId: "pro" | "team") {
     setUpgradingPlan(planId);
     try {
       const isLoaded = await loadRazorpayScript();
-      const sub = await createSubscriptionMutation.mutateAsync({ plan: planId });
-
-      if (sub.subscriptionId === "sub_test_simulated" || !isLoaded) {
-        toast.success(`🎉 You are now upgraded to ${planId.toUpperCase()} Plan (Test Mode)!`);
+      if (!isLoaded) {
+        toast.error("Failed to load Razorpay checkout. Please disable ad-blockers or Brave Shields.");
         return;
       }
 
-      const RazorpayConstructor = (window as unknown as { Razorpay?: new (opts: unknown) => { open: () => void } }).Razorpay;
+      const cycle = annual ? "annual" : "monthly";
+      const sub = await createSubscriptionMutation.mutateAsync({ plan: planId, cycle });
+
+      // If test simulation mode
+      if (sub.type === "simulation") {
+        await verifyPaymentMutation.mutateAsync({
+          plan: planId,
+          cycle,
+        });
+        await subQuery.refetch();
+        await utils.auth.me.invalidate();
+        toast.success(`🎉 Upgraded to ${planId.toUpperCase()} Plan (Test Mode)!`);
+        return;
+      }
+
+      const RazorpayConstructor = (
+        window as unknown as {
+          Razorpay?: new (opts: Record<string, unknown>) => { open: () => void };
+        }
+      ).Razorpay;
+
       if (!RazorpayConstructor) {
-        toast.success(`🎉 Subscribed to ${planId.toUpperCase()} Plan!`);
+        toast.error("Razorpay SDK could not be initialized in browser.");
         return;
       }
 
-      const rzp = new RazorpayConstructor({
-        key: sub.keyId,
-        subscription_id: sub.subscriptionId,
-        name: "My-Form",
-        description: `${planId.toUpperCase()} Subscription`,
-        handler: function () {
-          toast.success(`🎉 Payment verified! Upgraded to ${planId.toUpperCase()} Plan.`);
-        },
-        theme: { color: "#E8854A" },
-      });
-      rzp.open();
+      if (sub.type === "subscription") {
+        const rzp = new RazorpayConstructor({
+          key: sub.keyId,
+          subscription_id: sub.subscriptionId,
+          name: "My-Form",
+          description: `${planId.toUpperCase()} Subscription (${cycle})`,
+          handler: async function (response: {
+            razorpay_payment_id: string;
+            razorpay_subscription_id: string;
+            razorpay_signature: string;
+          }) {
+            try {
+              await verifyPaymentMutation.mutateAsync({
+                plan: planId,
+                cycle,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySubscriptionId: response.razorpay_subscription_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+              await subQuery.refetch();
+              await utils.auth.me.invalidate();
+              toast.success(`🎉 Payment verified! Upgraded to ${planId.toUpperCase()} Plan.`);
+            } catch {
+              toast.error("Payment verification failed on server.");
+            }
+          },
+          theme: { color: "#E8854A" },
+        });
+        rzp.open();
+      } else if (sub.type === "order") {
+        const rzp = new RazorpayConstructor({
+          key: sub.keyId,
+          order_id: sub.orderId,
+          amount: sub.amount,
+          currency: sub.currency,
+          name: "My-Form",
+          description: `${planId.toUpperCase()} Plan Upgrade (${cycle})`,
+          handler: async function (response: {
+            razorpay_payment_id: string;
+            razorpay_order_id: string;
+            razorpay_signature: string;
+          }) {
+            try {
+              await verifyPaymentMutation.mutateAsync({
+                plan: planId,
+                cycle,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+              await subQuery.refetch();
+              await utils.auth.me.invalidate();
+              toast.success(`🎉 Payment verified! Upgraded to ${planId.toUpperCase()} Plan.`);
+            } catch {
+              toast.error("Payment verification failed on server.");
+            }
+          },
+          theme: { color: "#E8854A" },
+        });
+        rzp.open();
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Subscription checkout failed";
       toast.error(message);
@@ -373,7 +480,7 @@ export default function BillingPage() {
             Your subscription
           </h1>
           <p className="mt-1.5 text-sm text-[#6B6B6B]">
-            Manage your plan and track usage across your workspace.
+            Manage your plan and track live usage across your workspace.
           </p>
         </motion.div>
 
@@ -389,20 +496,21 @@ export default function BillingPage() {
               <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#6B6B6B]">
                 Active plan
               </span>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight">Free Beta</h2>
-              <p className="mt-0.5 text-xs text-[#6B6B6B]">
-                All premium features unlocked during public beta.
-              </p>
+              <div className="flex items-center gap-2.5 mt-1">
+                <h2 className="text-xl font-semibold tracking-tight">{currentPlanTitle}</h2>
+                {subQuery.isLoading && <Loader2 className="size-4 animate-spin text-[#6B6B6B]" />}
+              </div>
+              <p className="mt-0.5 text-xs text-[#6B6B6B]">{currentPlanDescription}</p>
             </div>
-            <div className="shrink-0 rounded-full border border-[#E8854A]/25 bg-[#E8854A]/10 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-[#E8854A]">
-              Beta
+            <div className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
+              {currentPlan.toUpperCase()}
             </div>
           </div>
 
           {/* Usage bars */}
           <div className="grid gap-4 sm:grid-cols-3">
             {usageStats.map(({ label, value, max, unit, icon: Icon }, i) => {
-              const pct = Math.min((value / max) * 100, 100);
+              const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
               const isHigh = pct >= 80;
               return (
                 <motion.div
@@ -420,7 +528,7 @@ export default function BillingPage() {
                     <span
                       className={`font-mono text-[11px] font-semibold ${isHigh ? "text-amber-400" : "text-[#F2F2F2]"}`}
                     >
-                      {value.toLocaleString()} / {max.toLocaleString()}
+                      {value.toLocaleString()} / {max >= 9000 ? "∞" : max.toLocaleString()}
                     </span>
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/4">
@@ -461,7 +569,7 @@ export default function BillingPage() {
             <button
               type="button"
               onClick={() => setAnnual(false)}
-              className={`rounded-full px-3.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-widest transition-all duration-200 ${
+              className={`rounded-full px-3.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-widest transition-all duration-200 cursor-pointer ${
                 !annual
                   ? "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20"
                   : "text-[#6B6B6B] hover:text-zinc-300"
@@ -472,7 +580,7 @@ export default function BillingPage() {
             <button
               type="button"
               onClick={() => setAnnual(true)}
-              className={`rounded-full px-3.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-widest transition-all duration-200 ${
+              className={`rounded-full px-3.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-widest transition-all duration-200 cursor-pointer ${
                 annual
                   ? "bg-[#E8854A]/12 text-[#E8854A] ring-1 ring-[#E8854A]/20"
                   : "text-[#6B6B6B] hover:text-zinc-300"
@@ -504,7 +612,7 @@ export default function BillingPage() {
               plan={plan}
               annual={annual}
               index={i}
-              isCurrent={plan.id === "free"}
+              isCurrent={plan.id === currentPlan}
               onUpgrade={handleUpgrade}
               isUpgrading={upgradingPlan === plan.id}
             />
@@ -517,7 +625,7 @@ export default function BillingPage() {
           transition={{ delay: 0.5 }}
           className="mt-8 text-center font-mono text-[10px] text-[#3A3A3A]"
         >
-          No credit card required · Cancel anytime · Free during beta
+          Secure payments powered by Razorpay · Cancel anytime
         </motion.p>
       </div>
     </div>

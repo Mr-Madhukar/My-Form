@@ -16,6 +16,7 @@ export const meOutputSchema = z.object({
     .nullable()
     .describe("URL to the user's profile picture, null if not set"),
   role: z.string().describe("User's role: user or admin"),
+  plan: z.string().default("free").describe("User's subscription plan: free, pro, team"),
   isBanned: z.boolean().describe("Whether the user account is suspended"),
   createdAt: z.date().describe("Timestamp when the user account was created"),
 });

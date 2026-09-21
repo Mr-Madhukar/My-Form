@@ -11,6 +11,7 @@ export const usersTable = pgTable("users", {
   profileImageUrl: text("profile_image_url"),
 
   role: varchar("role", { length: 20 }).notNull().default("user"),
+  plan: varchar("plan", { length: 20 }).notNull().default("free"),
   isBanned: boolean("is_banned").notNull().default(false),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),

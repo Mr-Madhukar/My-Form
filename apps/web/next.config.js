@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../../"),
-  allowedDevOrigins: ["10.59.51.3", "localhost", "127.0.0.1"],
+  allowedDevOrigins: ["localhost", "127.0.0.1"],
   experimental: {
     optimizePackageImports: [
       "lucide-react",
@@ -24,7 +24,7 @@ const nextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel-insights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.posthog.com https://openrouter.ai https://*.vercel-insights.com; frame-ancestors 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel-insights.com https://checkout.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.razorpay.com; connect-src 'self' https://*.posthog.com https://openrouter.ai https://*.vercel-insights.com https://api.razorpay.com https://lumberjack.razorpay.com; frame-ancestors 'self';",
           },
           {
             key: "X-Content-Type-Options",

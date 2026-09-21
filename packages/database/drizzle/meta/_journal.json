@@ -78,6 +78,13 @@
       "when": 1789980427580,
       "tag": "0010_nasty_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789988700755,
+      "tag": "0011_square_sage",
+      "breakpoints": true
     }
   ]
 }

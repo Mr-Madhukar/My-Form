@@ -563,7 +563,9 @@ export function FormRunner({ slug, title, description, theme, fields, payment }:
     try {
       const loaded = await loadRazorpayScript();
       if (!loaded) {
-        setBannerError("Unable to load payment gateway. Please check your internet connection.");
+        setBannerError(
+          "Unable to load Razorpay payment gateway. Please check your internet connection or disable ad-blockers / Brave Shields.",
+        );
         return;
       }
 

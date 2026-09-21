@@ -15,3 +15,4 @@ export * from "./models/ai-followups";
 export * from "./models/form-themes";
 export * from "./models/analytics-events";
 export * from "./models/email-preferences";
+export * from "./models/subscriptions";

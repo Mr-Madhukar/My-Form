@@ -100,6 +100,7 @@ const userOutputSchema = z.object({
   emailVerified: z.boolean().nullable(),
   profileImageUrl: z.string().nullable(),
   role: z.string().default("user"),
+  plan: z.string().default("free"),
   isBanned: z.boolean().default(false),
   createdAt: z.date().nullable(),
 });
