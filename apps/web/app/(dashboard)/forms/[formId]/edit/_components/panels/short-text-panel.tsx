@@ -6,7 +6,7 @@ import { Switch } from "~/components/ui/switch";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 
-export function ShortTextPanel({ field }: { field: EditorField }) {
+export function ShortTextPanel({ field }: { readonly field: EditorField }) {
   const updateField = useFormEditorStore((s) => s.updateField);
   const config = field.config as {
     placeholder?: string;
@@ -33,7 +33,7 @@ export function ShortTextPanel({ field }: { field: EditorField }) {
           value={field.label}
           onChange={(e) => update({ label: e.target.value })}
           placeholder="Enter your question"
-          className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+          className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
         />
       </div>
 
@@ -45,7 +45,7 @@ export function ShortTextPanel({ field }: { field: EditorField }) {
           value={config.placeholder ?? ""}
           onChange={(e) => updateConfig({ placeholder: e.target.value || undefined })}
           placeholder="Type your answer…"
-          className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+          className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
         />
       </div>
 
@@ -84,7 +84,7 @@ export function ShortTextPanel({ field }: { field: EditorField }) {
                 updateConfig({ minLength: e.target.value ? Number(e.target.value) : undefined })
               }
               placeholder="—"
-              className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+              className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -97,7 +97,7 @@ export function ShortTextPanel({ field }: { field: EditorField }) {
                 updateConfig({ maxLength: e.target.value ? Number(e.target.value) : undefined })
               }
               placeholder="—"
-              className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+              className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
             />
           </div>
         </div>

@@ -10,18 +10,18 @@ export function FormTabs({
   formId,
   active,
 }: {
-  formId: string;
-  active: "responses" | "summary" | "analytics" | "integrations";
+  readonly formId: string;
+  readonly active: "responses" | "summary" | "analytics" | "integrations";
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-full bg-white/[0.04] p-1 ring-1 ring-white/[0.06]">
+    <div className="flex items-center gap-1 rounded-full bg-white/4 p-1 ring-1 ring-white/6">
       <Link
         href={`/forms/${formId}/responses`}
         className={cn(
           "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
           EASE,
           active === "responses"
-            ? "bg-white/[0.08] text-[#F2F2F2]"
+            ? "bg-white/8 text-[#F2F2F2]"
             : "text-[#6B6B6B] hover:text-[#F2F2F2]",
         )}
       >

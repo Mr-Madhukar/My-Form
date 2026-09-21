@@ -15,6 +15,30 @@ import { UrlPanel } from "./panels/url-panel";
 import { ConditionalPanel } from "./panels/conditional-panel";
 import { ThemePanel } from "./theme-panel";
 import type { FieldCondition } from "@repo/forms";
+import type { EditorField } from "~/stores/form-editor";
+
+const PANEL_COMPONENTS: Record<
+  string,
+  React.ComponentType<{ readonly field: EditorField }>
+> = {
+  short_text: ShortTextPanel,
+  long_text: LongTextPanel,
+  email: EmailPanel,
+  number: NumberPanel,
+  single_choice: SingleChoicePanel,
+  multiple_choice: MultipleChoicePanel,
+  rating: RatingPanel,
+  date: DatePanel,
+  file_upload: FileUploadPanel,
+  time: TimePanel,
+  url: UrlPanel,
+};
+
+function renderFieldPanel(field: EditorField | undefined): React.ReactNode {
+  if (!field) return null;
+  const Component = PANEL_COMPONENTS[field.type];
+  return Component ? <Component field={field} /> : null;
+}
 
 export function PropertyPanel() {
   const { fields, selectedFieldId, updateField } = useFormEditorStore();
@@ -33,32 +57,10 @@ export function PropertyPanel() {
     });
   };
 
-  const fieldPanel = !field ? null : field.type === "short_text" ? (
-    <ShortTextPanel field={field} />
-  ) : field.type === "long_text" ? (
-    <LongTextPanel field={field} />
-  ) : field.type === "email" ? (
-    <EmailPanel field={field} />
-  ) : field.type === "number" ? (
-    <NumberPanel field={field} />
-  ) : field.type === "single_choice" ? (
-    <SingleChoicePanel field={field} />
-  ) : field.type === "multiple_choice" ? (
-    <MultipleChoicePanel field={field} />
-  ) : field.type === "rating" ? (
-    <RatingPanel field={field} />
-  ) : field.type === "date" ? (
-    <DatePanel field={field} />
-  ) : field.type === "file_upload" ? (
-    <FileUploadPanel field={field} />
-  ) : field.type === "time" ? (
-    <TimePanel field={field} />
-  ) : field.type === "url" ? (
-    <UrlPanel field={field} />
-  ) : null;
+  const fieldPanel = renderFieldPanel(field);
 
   return (
-    <aside className="flex h-full w-[280px] shrink-0 flex-col border-l border-white/[0.07] bg-[#0d0d0d]">
+    <aside className="flex h-full w-70 shrink-0 flex-col border-l border-white/[0.07] bg-[#0d0d0d]">
       <div className="flex h-14 shrink-0 items-center border-b border-white/[0.07] px-4">
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6B6B6B]">
           {field ? "Properties" : "Theme"}

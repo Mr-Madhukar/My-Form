@@ -1,7 +1,7 @@
 FROM node:22-alpine AS base
 ENV PNPM_HOME=/usr/local/bin
-RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
-RUN apk add --no-cache libc6-compat
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate \
+    && apk add --no-cache libc6-compat
 
 # Prune workspace to only api's deps
 FROM base AS pruner

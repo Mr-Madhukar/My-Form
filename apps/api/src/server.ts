@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import express from "express";
 import { logger } from "@repo/logger";
 import cors from "cors";
@@ -17,6 +17,7 @@ import { redisClient } from "@repo/services/redis";
 import { env } from "./env";
 
 export const app = express();
+app.disable("x-powered-by");
 
 // Trust the upstream proxy so req.ip (used by rate limiting) reflects the real client IP
 app.set("trust proxy", 1);

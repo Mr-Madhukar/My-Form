@@ -26,17 +26,17 @@ function resolveMax(value: Breakpoint | number): string {
   return `(max-width: ${px - 1}px)`;
 }
 
-function parseQuery(query: BreakpointQuery | MediaQueryInput | (string & {})): string {
-  if (typeof query !== "string") {
-    const parts: string[] = [];
-    if (query.min != null) parts.push(resolveMin(query.min));
-    if (query.max != null) parts.push(resolveMax(query.max));
-    if (query.pointer === "coarse") parts.push("(pointer: coarse)");
-    if (query.pointer === "fine") parts.push("(pointer: fine)");
-    if (parts.length === 0) return "(min-width: 0px)";
-    return parts.join(" and ");
-  }
+function parseObjectQuery(query: MediaQueryInput): string {
+  const parts: string[] = [];
+  if (query.min != null) parts.push(resolveMin(query.min));
+  if (query.max != null) parts.push(resolveMax(query.max));
+  if (query.pointer === "coarse") parts.push("(pointer: coarse)");
+  if (query.pointer === "fine") parts.push("(pointer: fine)");
+  if (parts.length === 0) return "(min-width: 0px)";
+  return parts.join(" and ");
+}
 
+function parseStringQuery(query: string): string {
   if (query.startsWith("(")) return query;
 
   const parts: string[] = [];
@@ -50,6 +50,13 @@ function parseQuery(query: BreakpointQuery | MediaQueryInput | (string & {})): s
   }
 
   return parts.length > 0 ? parts.join(" and ") : query;
+}
+
+function parseQuery(query: BreakpointQuery | MediaQueryInput | (string & {})): string {
+  if (typeof query !== "string") {
+    return parseObjectQuery(query);
+  }
+  return parseStringQuery(query);
 }
 
 function getServerSnapshot(): boolean {

@@ -6,7 +6,7 @@ let authClient: JWT | null = null;
 if (env.GOOGLE_SERVICE_ACCOUNT_EMAIL && env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
   authClient = new JWT({
     email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    key: env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replaceAll(String.raw`\n`, "\n"),
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 }

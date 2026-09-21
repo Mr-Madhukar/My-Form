@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { use } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { Loader2, AlertCircle, Monitor } from "lucide-react";
 import {
@@ -26,7 +25,7 @@ import { FieldPalette, FIELD_GROUPS } from "./_components/field-palette";
 import { FieldCanvas } from "./_components/field-canvas";
 import { PropertyPanel } from "./_components/property-panel";
 
-export default function EditorPage({ params }: { params: Promise<{ formId: string }> }) {
+export default function EditorPage({ params }: { readonly params: Promise<{ readonly formId: string }> }) {
   const { formId } = use(params);
   const { setForm, fields, addField, reorderFields, theme } = useFormEditorStore();
   const cssVars = themeToCSSVars(theme);

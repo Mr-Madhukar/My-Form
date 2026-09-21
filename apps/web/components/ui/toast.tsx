@@ -50,8 +50,8 @@ function Toasts({
   position,
   portalProps,
 }: {
-  position: ToastPosition;
-  portalProps?: React.ComponentProps<typeof Toast.Portal>;
+  readonly position: ToastPosition;
+  readonly portalProps?: React.ComponentProps<typeof Toast.Portal>;
 }): React.ReactElement {
   const { toasts } = Toast.useToastManager();
   const swipeDirection = getSwipeDirection(position);
@@ -160,7 +160,7 @@ function Toasts({
 function AnchoredToasts({
   portalProps,
 }: {
-  portalProps?: React.ComponentProps<typeof Toast.Portal>;
+  readonly portalProps?: React.ComponentProps<typeof Toast.Portal>;
 }): React.ReactElement {
   const { toasts } = Toast.useToastManager();
 
@@ -252,8 +252,8 @@ export type ToastPosition =
   | "bottom-right";
 
 export interface ToastProviderProps extends Toast.Provider.Props {
-  position?: ToastPosition;
-  portalProps?: React.ComponentProps<typeof Toast.Portal>;
+  readonly position?: ToastPosition;
+  readonly portalProps?: React.ComponentProps<typeof Toast.Portal>;
 }
 
 export function ToastProvider({
@@ -271,7 +271,7 @@ export function ToastProvider({
 }
 
 export interface AnchoredToastProviderProps extends Toast.Provider.Props {
-  portalProps?: React.ComponentProps<typeof Toast.Portal>;
+  readonly portalProps?: React.ComponentProps<typeof Toast.Portal>;
 }
 
 export function AnchoredToastProvider({

@@ -57,9 +57,9 @@ async function handleProxy(req: NextRequest, pathParts: string[]) {
     const res = await fetch(url.toString(), init);
     const resHeaders = new Headers();
     
-    const skipHeaders = ["set-cookie", "content-encoding", "content-length", "transfer-encoding"];
+    const skipHeaders = new Set(["set-cookie", "content-encoding", "content-length", "transfer-encoding"]);
     res.headers.forEach((value, key) => {
-      if (!skipHeaders.includes(key.toLowerCase())) {
+      if (!skipHeaders.has(key.toLowerCase())) {
         resHeaders.set(key, value);
       }
     });

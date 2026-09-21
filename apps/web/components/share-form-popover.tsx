@@ -17,8 +17,8 @@ export function ShareFormPopover({
   publicSlug,
   trigger,
 }: {
-  publicSlug: string;
-  trigger: React.ReactElement;
+  readonly publicSlug: string;
+  readonly trigger: React.ReactElement;
 }) {
   const [copied, setCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);

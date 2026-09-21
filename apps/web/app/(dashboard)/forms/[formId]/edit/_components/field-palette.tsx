@@ -129,13 +129,13 @@ function PaletteItem({
   groupIndex,
   typeIndex,
 }: {
-  type: string;
-  label: string;
-  description: string;
-  icon: React.ElementType;
-  defaultConfig: Record<string, unknown>;
-  groupIndex: number;
-  typeIndex: number;
+  readonly type: string;
+  readonly label: string;
+  readonly description: string;
+  readonly icon: React.ElementType;
+  readonly defaultConfig: Record<string, unknown>;
+  readonly groupIndex: number;
+  readonly typeIndex: number;
 }) {
   const addField = useFormEditorStore((s) => s.addField);
   const fields = useFormEditorStore((s) => s.fields);

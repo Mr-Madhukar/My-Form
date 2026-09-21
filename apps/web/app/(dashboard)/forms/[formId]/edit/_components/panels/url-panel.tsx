@@ -6,7 +6,7 @@ import { Switch } from "~/components/ui/switch";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 
-export function UrlPanel({ field }: { field: EditorField }) {
+export function UrlPanel({ field }: { readonly field: EditorField }) {
   const updateField = useFormEditorStore((s) => s.updateField);
   const config = field.config as { placeholder?: string };
 
@@ -20,7 +20,7 @@ export function UrlPanel({ field }: { field: EditorField }) {
           value={field.label}
           onChange={(e) => updateField(field.id, { label: e.target.value })}
           placeholder="Enter your question"
-          className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+          className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
         />
       </div>
 
@@ -36,7 +36,7 @@ export function UrlPanel({ field }: { field: EditorField }) {
             })
           }
           placeholder="https://example.com"
-          className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+          className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
         />
       </div>
 

@@ -11,7 +11,7 @@ import { Button } from "~/components/ui/button";
 
 type Option = { id: string; label: string };
 
-export function MultipleChoicePanel({ field }: { field: EditorField }) {
+export function MultipleChoicePanel({ field }: { readonly field: EditorField }) {
   const updateField = useFormEditorStore((s) => s.updateField);
   const config = field.config as { options: Option[]; min?: number; max?: number };
   const options = config.options ?? [];
@@ -34,7 +34,7 @@ export function MultipleChoicePanel({ field }: { field: EditorField }) {
           value={field.label}
           onChange={(e) => updateField(field.id, { label: e.target.value })}
           placeholder="Enter your question"
-          className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+          className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
         />
       </div>
 
@@ -51,7 +51,7 @@ export function MultipleChoicePanel({ field }: { field: EditorField }) {
                   setOptions(next);
                 }}
                 placeholder={`Option ${i + 1}`}
-                className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+                className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
               />
               <Button
                 type="button"
@@ -60,7 +60,7 @@ export function MultipleChoicePanel({ field }: { field: EditorField }) {
                 onClick={() => setOptions(options.filter((_, j) => j !== i))}
                 disabled={options.length <= 1}
                 aria-label="Remove option"
-                className="shrink-0 rounded-full p-1 text-[#6B6B6B] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/[0.06] hover:text-[#E8854A] disabled:opacity-30"
+                className="shrink-0 rounded-full p-1 text-[#6B6B6B] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/6 hover:text-[#E8854A] disabled:opacity-30"
               >
                 <X className="size-4" />
               </Button>
@@ -72,7 +72,7 @@ export function MultipleChoicePanel({ field }: { field: EditorField }) {
           variant="ghost"
           size="sm"
           onClick={() => setOptions([...options, { id: nanoid(), label: "" }])}
-          className="gap-1.5 rounded-full bg-white/[0.04] text-[#F2F2F2] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/[0.08] active:scale-[0.98]"
+          className="gap-1.5 rounded-full bg-white/4 text-[#F2F2F2] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/8 active:scale-[0.98]"
         >
           <Plus className="size-3.5" />
           Add option
@@ -94,7 +94,7 @@ export function MultipleChoicePanel({ field }: { field: EditorField }) {
                 updateConfig({ min: e.target.value ? Number(e.target.value) : undefined })
               }
               placeholder="—"
-              className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+              className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -107,7 +107,7 @@ export function MultipleChoicePanel({ field }: { field: EditorField }) {
                 updateConfig({ max: e.target.value ? Number(e.target.value) : undefined })
               }
               placeholder="—"
-              className="border-white/[0.07] bg-white/[0.02] text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
+              className="border-white/[0.07] bg-white/2 text-sm text-[#F2F2F2] focus-visible:ring-[#E8854A]/40"
             />
           </div>
         </div>

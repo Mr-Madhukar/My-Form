@@ -80,7 +80,6 @@ export function BreadcrumbSeparator({
       aria-hidden="true"
       className={cn("opacity-80 [&>svg]:size-4", className)}
       data-slot="breadcrumb-separator"
-      role="presentation"
       {...props}
     >
       {children ?? <ChevronRight />}
@@ -97,7 +96,6 @@ export function BreadcrumbEllipsis({
       aria-hidden="true"
       className={className}
       data-slot="breadcrumb-ellipsis"
-      role="presentation"
       {...props}
     >
       <MoreHorizontal className="size-4" />

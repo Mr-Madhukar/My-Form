@@ -56,7 +56,7 @@ jobs:
 
       - name: Install Playwright Browsers
         working-directory: apps/web
-        run: pnpm exec playwright install --with-deps
+        run: pnpm run test:e2e:setup
 
       - name: Run database migrations
         working-directory: packages/database

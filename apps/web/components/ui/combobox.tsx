@@ -22,22 +22,26 @@ export function Combobox<Value, Multiple extends boolean | undefined = false>(
   props: ComboboxPrimitive.Root.Props<Value, Multiple>,
 ): React.ReactElement {
   const chipsRef = React.useRef<Element | null>(null);
+  const multiple = !!props.multiple;
+  const contextValue = React.useMemo(() => ({ chipsRef, multiple }), [multiple]);
   return (
-    <ComboboxContext.Provider value={{ chipsRef, multiple: !!props.multiple }}>
+    <ComboboxContext.Provider value={contextValue}>
       <ComboboxPrimitive.Root {...props} />
     </ComboboxContext.Provider>
   );
 }
+
+type ComboboxInputSize = "sm" | "default" | "lg" | number;
 
 export function ComboboxChipsInput({
   className,
   size,
   ...props
 }: Omit<ComboboxPrimitive.Input.Props, "size"> & {
-  size?: "sm" | "default" | "lg" | number;
+  size?: ComboboxInputSize;
   ref?: React.Ref<HTMLInputElement>;
 }): React.ReactElement {
-  const sizeValue = (size ?? "default") as "sm" | "default" | "lg" | number;
+  const sizeValue = (size ?? "default") as ComboboxInputSize;
 
   return (
     <ComboboxPrimitive.Input

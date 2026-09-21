@@ -85,6 +85,46 @@ export function evaluateCondition(
   }
 }
 
+function applyConditionAction(
+  condition: FieldCondition,
+  answers: Record<string, unknown>,
+  state: { visible: boolean; required: boolean }
+): void {
+  const met = evaluateCondition(condition, answers);
+
+  switch (condition.action) {
+    case "show":
+      if (!met) state.visible = false;
+      break;
+    case "hide":
+      if (met) state.visible = false;
+      break;
+    case "require":
+      if (met) state.required = true;
+      break;
+  }
+}
+
+function resolveFieldState(
+  field: { required: boolean; conditions?: FieldCondition[] },
+  answers: Record<string, unknown>
+): { visible: boolean; required: boolean } {
+  const state = { visible: true, required: field.required };
+
+  if (field.conditions && field.conditions.length > 0) {
+    for (const condition of field.conditions) {
+      applyConditionAction(condition, answers, state);
+    }
+  }
+
+  // Hidden fields cannot be required (no validation on hidden fields)
+  if (!state.visible) {
+    state.required = false;
+  }
+
+  return state;
+}
+
 /**
  * Determines which fields should be visible and which should be required
  * based on the current answers and each field's conditions.
@@ -93,39 +133,12 @@ export function evaluateCondition(
  */
 export function evaluateFieldVisibility(
   fields: { id: string; required: boolean; conditions?: FieldCondition[] }[],
-  answers: Record<string, unknown>,
+  answers: Record<string, unknown>
 ): Map<string, { visible: boolean; required: boolean }> {
   const result = new Map<string, { visible: boolean; required: boolean }>();
 
   for (const field of fields) {
-    let visible = true;
-    let required = field.required;
-
-    if (field.conditions && field.conditions.length > 0) {
-      for (const condition of field.conditions) {
-        const met = evaluateCondition(condition, answers);
-
-        switch (condition.action) {
-          case "show":
-            // If the condition is NOT met, hide the field
-            if (!met) visible = false;
-            break;
-          case "hide":
-            // If the condition IS met, hide the field
-            if (met) visible = false;
-            break;
-          case "require":
-            // If the condition IS met, make it required
-            if (met) required = true;
-            break;
-        }
-      }
-    }
-
-    // Hidden fields cannot be required (no validation on hidden fields)
-    if (!visible) required = false;
-
-    result.set(field.id, { visible, required });
+    result.set(field.id, resolveFieldState(field, answers));
   }
 
   return result;

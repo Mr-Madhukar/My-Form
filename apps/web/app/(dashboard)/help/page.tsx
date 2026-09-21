@@ -82,7 +82,7 @@ const faqs = [
   },
 ];
 
-function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
+function FAQItem({ q, a, index }: { readonly q: string; readonly a: string; readonly index: number }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -119,7 +119,7 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="h-px bg-white/[0.05]" />
+      <div className="h-px bg-white/5" />
     </motion.div>
   );
 }
@@ -141,7 +141,7 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-full bg-[#080808] text-[#F2F2F2]">
-      <div className="pointer-events-none fixed left-1/2 top-0 -z-0 h-80 w-[500px] -translate-x-1/2 rounded-full bg-[#E8854A]/3 blur-[130px]" />
+      <div className="pointer-events-none fixed left-1/2 top-0 z-0 h-80 w-125 -translate-x-1/2 rounded-full bg-[#E8854A]/3 blur-[130px]" />
 
       <div className="relative mx-auto max-w-2xl px-6 py-10">
         {/* Header */}
@@ -176,7 +176,7 @@ export default function HelpPage() {
             placeholder="Search questions…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-10 w-full rounded-xl border border-white/6 bg-white/[0.03] pl-9 pr-4 text-sm text-[#F2F2F2] placeholder:text-[#3A3A3A] outline-none transition-colors duration-200 focus:border-[#E8854A]/30 focus:bg-white/[0.04]"
+            className="h-10 w-full rounded-xl border border-white/6 bg-white/3 pl-9 pr-4 text-sm text-[#F2F2F2] placeholder:text-[#3A3A3A] outline-none transition-colors duration-200 focus:border-[#E8854A]/30 focus:bg-white/4"
           />
         </motion.div>
 
@@ -189,10 +189,10 @@ export default function HelpPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + ci * 0.06, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                className="rounded-2xl border border-white/6 bg-white/[0.02] px-5 py-1"
+                className="rounded-2xl border border-white/6 bg-white/2 px-5 py-1"
               >
                 {/* Category header */}
-                <div className="flex items-center gap-2 border-b border-white/[0.05] py-4">
+                <div className="flex items-center gap-2 border-b border-white/5 py-4">
                   <div className="flex size-6 items-center justify-center rounded-lg bg-[#E8854A]/10">
                     <cat.icon className="size-3 text-[#E8854A]" />
                   </div>
@@ -222,7 +222,7 @@ export default function HelpPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-          className="mt-8 rounded-2xl border border-white/6 bg-white/[0.02] p-6"
+          className="mt-8 rounded-2xl border border-white/6 bg-white/2 p-6"
         >
           <div className="mb-1 flex items-center gap-2">
             <Mail className="size-4 text-[#6B6B6B]" />

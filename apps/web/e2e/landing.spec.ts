@@ -3,7 +3,6 @@ import { test, expect } from "@playwright/test";
 test.describe("Landing Page", () => {
   test("loads landing page with brand heading and CTA buttons", async ({ page, isMobile }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
 
     // Verify page title
     await expect(page).toHaveTitle(/My Form/i);
@@ -46,7 +45,6 @@ test.describe("Landing Page", () => {
 
   test("navigates from landing page to explore templates", async ({ page, isMobile }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
 
     if (isMobile) {
       const menuButton = page.getByRole("button", { name: /open menu/i });
@@ -58,6 +56,7 @@ test.describe("Landing Page", () => {
       await exploreLink.click();
     } else {
       const exploreLink = page.getByRole("link", { name: /explore/i }).first();
+      await expect(exploreLink).toBeVisible();
       await exploreLink.click();
     }
 
