@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Landing Page", () => {
   test("loads landing page with brand heading and CTA buttons", async ({ page, isMobile }) => {
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
 
     // Verify page title
     await expect(page).toHaveTitle(/My Form/i);
@@ -16,7 +17,9 @@ test.describe("Landing Page", () => {
       const menuButton = page.getByRole("button", { name: /open menu/i });
       await expect(menuButton).toBeVisible();
       await menuButton.click();
-      const exploreLink = page.getByRole("link", { name: /explore/i }).first();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeVisible();
+      const exploreLink = dialog.getByRole("link", { name: /explore/i });
       await expect(exploreLink).toBeVisible();
       await page.keyboard.press("Escape");
     } else {
@@ -43,12 +46,21 @@ test.describe("Landing Page", () => {
 
   test("navigates from landing page to explore templates", async ({ page, isMobile }) => {
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
     if (isMobile) {
       const menuButton = page.getByRole("button", { name: /open menu/i });
+      await expect(menuButton).toBeVisible();
       await menuButton.click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeVisible();
+      const exploreLink = dialog.getByRole("link", { name: /explore/i });
+      await exploreLink.click();
+    } else {
+      const exploreLink = page.getByRole("link", { name: /explore/i }).first();
+      await exploreLink.click();
     }
-    const exploreLink = page.getByRole("link", { name: /explore/i }).first();
-    await exploreLink.click();
+
     await expect(page).toHaveURL(/.*explore/);
   });
 });

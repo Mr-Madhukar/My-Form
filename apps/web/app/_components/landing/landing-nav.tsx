@@ -11,6 +11,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -153,6 +154,9 @@ export function LandingNav() {
                       className="object-contain logo-img"
                     />
                   </SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Mobile navigation menu
+                  </SheetDescription>
                 </SheetHeader>
                 <div className="flex flex-col gap-2 px-4 mt-6">
                   {navLinks.map((link) => (
