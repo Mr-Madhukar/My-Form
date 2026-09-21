@@ -1,0 +1,50 @@
+name: Playwright E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-e2e:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Install Playwright Browsers
+        run: pnpm --filter web exec playwright install --with-deps
+
+      - name: Run Playwright E2E tests
+        run: pnpm --filter web test:e2e
+        env:
+          CI: true
+          SKIP_ENV_VALIDATION: true
+          NEXT_PUBLIC_API_URL: http://localhost:3000/api/trpc
+          JWT_ACCESS_SECRET: dummy_secret_for_e2e_ci_testing_12345
+          RAZORPAY_WEBHOOK_SECRET: dummy_webhook_secret_for_ci
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 14

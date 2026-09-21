@@ -253,7 +253,7 @@ export function Hero() {
         </motion.div>
 
         {/* Dynamic Sentence Builder Headline - Visible immediately for optimal LCP */}
-        <div
+        <h1
           className="mt-10 max-w-5xl text-3xl font-semibold leading-[1.6] tracking-tight text-[#F2F2F2] sm:text-5xl md:text-6xl select-none"
         >
           I want to build a{" "}
@@ -355,7 +355,7 @@ export function Hero() {
               </motion.span>
             </AnimatePresence>
           </span>.
-        </div>
+        </h1>
 
         {/* Animated Subheading */}
         <motion.p

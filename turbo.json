@@ -16,7 +16,10 @@
     "RAZORPAY_KEY_SECRET",
     "NEXT_PUBLIC_RAZORPAY_KEY_ID",
     "RAZORPAY_PRO_PLAN_ID",
-    "RAZORPAY_SCALE_PLAN_ID"
+    "RAZORPAY_SCALE_PLAN_ID",
+    "CI",
+    "PLAYWRIGHT_TEST_BASE_URL",
+    "E2E_API_BASE"
   ],
   "tasks": {
     "build": {
@@ -45,6 +48,10 @@
     },
     "test": {
       "dependsOn": ["^build"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false
     },
     "clean": {
       "cache": false

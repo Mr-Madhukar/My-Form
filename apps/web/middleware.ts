@@ -11,6 +11,7 @@ const PUBLIC_PATHS = [
   "/f/",
   "/terms",
   "/privacy",
+  "/explore",
 ];
 
 const AUTH_PATHS = ["/login", "/signup"];
