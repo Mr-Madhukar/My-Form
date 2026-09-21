@@ -1,4 +1,28 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+/**
+ * Helper: open the mobile nav Sheet and return the dialog locator.
+ *
+ * Radix UI's Dialog (used by the Sheet component) renders inside a Portal
+ * with a 500ms slide-in animation. On slow CI runners the element can take
+ * a beat to become visible, so we:
+ *   1. Click the hamburger menu button.
+ *   2. Wait for the `[role="dialog"]` element to attach to the DOM.
+ *   3. Assert it is visible with a generous timeout (10 s).
+ */
+async function openMobileMenu(page: Page) {
+  const menuButton = page.getByRole("button", { name: /open menu/i });
+  await expect(menuButton).toBeVisible();
+  await menuButton.click();
+
+  const dialog = page.getByRole("dialog");
+  // Wait until the portal element is in the DOM (not necessarily visible yet)
+  await dialog.waitFor({ state: "attached", timeout: 10_000 });
+  // Then assert it is fully visible (animation complete)
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+
+  return dialog;
+}
 
 test.describe("Landing Page", () => {
   test("loads landing page with brand heading and CTA buttons", async ({ page, isMobile }) => {
@@ -13,11 +37,7 @@ test.describe("Landing Page", () => {
 
     // Verify navigation links (responsive)
     if (isMobile) {
-      const menuButton = page.getByRole("button", { name: /open menu/i });
-      await expect(menuButton).toBeVisible();
-      await menuButton.click();
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible();
+      const dialog = await openMobileMenu(page);
       const exploreLink = dialog.getByRole("link", { name: /explore/i });
       await expect(exploreLink).toBeVisible();
       await page.keyboard.press("Escape");
@@ -47,11 +67,7 @@ test.describe("Landing Page", () => {
     await page.goto("/");
 
     if (isMobile) {
-      const menuButton = page.getByRole("button", { name: /open menu/i });
-      await expect(menuButton).toBeVisible();
-      await menuButton.click();
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible();
+      const dialog = await openMobileMenu(page);
       const exploreLink = dialog.getByRole("link", { name: /explore/i });
       await exploreLink.click();
     } else {
