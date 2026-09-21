@@ -1,8 +1,13 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { env } from "@repo/services/env";
-import db, { eq, and } from "@repo/database";
-import { usersTable, subscriptionsTable } from "@repo/database/schema";
+
+export const dynamic = "force-dynamic";
+
+async function getDb() {
+  const { default: db, eq, and } = await import("@repo/database");
+  const { usersTable, subscriptionsTable } = await import("@repo/database/schema");
+  return { db, eq, and, usersTable, subscriptionsTable };
+}
 
 function isSignatureValid(rawBody: string, signature: string | null, secret?: string): boolean {
   if (!secret || !signature) return true;
@@ -36,6 +41,7 @@ async function handleSubscriptionActivated(sub?: SubscriptionEntity) {
   const plan = sub?.notes?.plan || "pro";
   const cycle = sub?.notes?.cycle || "monthly";
 
+  const { db, eq, usersTable, subscriptionsTable } = await getDb();
   await db.update(usersTable).set({ plan }).where(eq(usersTable.id, userId));
 
   const periodEnd = sub?.current_end
@@ -58,6 +64,7 @@ async function handlePaymentCaptured(payment?: PaymentEntity) {
   if (!userId || !plan) return;
 
   const cycle = payment?.notes?.cycle || "monthly";
+  const { db, eq, usersTable, subscriptionsTable } = await getDb();
   await db.update(usersTable).set({ plan }).where(eq(usersTable.id, userId));
 
   const days = cycle === "annual" ? 365 : 30;
@@ -75,6 +82,7 @@ async function handleSubscriptionCancelled(sub?: SubscriptionEntity) {
   const userId = sub?.notes?.userId;
   if (!userId) return;
 
+  const { db, eq, and, usersTable, subscriptionsTable } = await getDb();
   await db.update(usersTable).set({ plan: "free" }).where(eq(usersTable.id, userId));
 
   if (sub?.id) {
@@ -95,7 +103,7 @@ export async function POST(req: NextRequest) {
     const rawBody = await req.text();
     const signature = req.headers.get("x-razorpay-signature");
 
-    if (!isSignatureValid(rawBody, signature, env.RAZORPAY_WEBHOOK_SECRET)) {
+    if (!isSignatureValid(rawBody, signature, process.env.RAZORPAY_WEBHOOK_SECRET)) {
       console.error("[Razorpay Webhook] Invalid signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }

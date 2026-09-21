@@ -16,7 +16,7 @@ const COOKIE_OPTS_ACCESS = {
   httpOnly: true,
   secure: IS_PROD,
   sameSite: "lax" as const,
-  maxAge: 15 * 60 * 1000,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: "/",
   ...domainOpt,
 };
@@ -25,7 +25,7 @@ const COOKIE_OPTS_REFRESH = {
   httpOnly: true,
   secure: IS_PROD,
   sameSite: "lax" as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   path: "/",
   ...domainOpt,
 };
@@ -36,7 +36,7 @@ function setAuthCookies(res: any, accessToken: string, refreshToken: string) {
   res.cookie("logged_in", "true", {
     secure: IS_PROD,
     sameSite: "lax" as const,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     path: "/",
     ...domainOpt,
   });

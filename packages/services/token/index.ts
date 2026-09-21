@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { db, eq, and, isNull } from "@repo/database";
 import { refreshTokensTable } from "@repo/database/schema";
@@ -12,7 +12,7 @@ function hashToken(raw: string): string {
 class TokenService {
   createAccessToken(userId: string): string {
     return jwt.sign({ userId } satisfies AccessTokenPayload, env.JWT_ACCESS_SECRET, {
-      expiresIn: "15m",
+      expiresIn: "7d",
     });
   }
 
@@ -24,7 +24,7 @@ class TokenService {
   async createRefreshToken(userId: string): Promise<string> {
     const raw = crypto.randomBytes(64).toString("hex");
     const tokenHash = hashToken(raw);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     await db.insert(refreshTokensTable).values({ userId, tokenHash, expiresAt });
     return raw;
@@ -42,6 +42,13 @@ class TokenService {
 
     // Reuse detection: token already revoked means possible theft
     if (existing.revokedAt !== null) {
+      // 30-second grace period for concurrent network requests (e.g. multiple tabs or window focus)
+      const elapsed = Date.now() - existing.revokedAt.getTime();
+      if (elapsed < 30_000) {
+        const newRaw = await this.createRefreshToken(existing.userId);
+        return { userId: existing.userId, newRaw };
+      }
+
       await this.revokeAllRefreshTokens(existing.userId);
       throw new Error("REFRESH_TOKEN_REUSE_DETECTED");
     }

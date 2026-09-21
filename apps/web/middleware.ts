@@ -35,7 +35,9 @@ export function middleware(request: NextRequest) {
   }
 
   const hasAccessToken = request.cookies.has("access_token");
-  const isAuthenticated = hasAccessToken;
+  const hasRefreshToken = request.cookies.has("refresh_token");
+  const hasLoggedIn = request.cookies.has("logged_in");
+  const isAuthenticated = hasAccessToken || hasRefreshToken || hasLoggedIn;
 
   const isPublicPath = PUBLIC_PATHS.some((p) =>
     p === "/" ? pathname === "/" : pathname.startsWith(p),

@@ -62,6 +62,26 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
     _setLoading(meQuery.isLoading || refreshMutation.isPending);
   }, [hasLoggedInCookie, meQuery.isLoading, refreshMutation.isPending]);
 
+  // When user switches back to this tab/app, ensure session is active
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        const loggedIn = typeof document !== "undefined" && document.cookie.includes("logged_in=true");
+        if (loggedIn) {
+          refreshAttempted.current = false;
+          if (meQuery.isError) {
+            refreshMutation.mutate(undefined, {
+              onSuccess: () => meQuery.refetch(),
+            });
+          }
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [meQuery.isError]);
+
   useEffect(() => {
     _setLogout(async () => {
       await logoutMutation.mutateAsync(undefined);
