@@ -4,21 +4,20 @@ import { useState } from "react";
 import { format } from "date-fns";
 import {
   Users,
-  Search,
   ShieldAlert,
   ShieldCheck,
   Ban,
   Loader2,
   CheckCircle2,
   XCircle,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { trpc } from "~/trpc/client";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { toast } from "sonner";
+import { AdminPagination } from "../_components/admin-pagination";
+import { AdminSearchBar } from "../_components/admin-search-bar";
+import { AdminFilterPills } from "../_components/admin-filter-pills";
 import {
   Dialog,
   DialogContent,
@@ -348,61 +347,33 @@ export default function AdminUsersPage() {
 
       {/* Filters & Search Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-zinc-900/40 p-3 rounded-2xl border border-zinc-800/60 backdrop-blur-xs">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
-          <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search by name or email…"
-            className="pl-9 bg-zinc-950/60 border-zinc-800/80 text-xs h-9 text-zinc-200 placeholder:text-zinc-500 rounded-xl"
-          />
-        </div>
+        <AdminSearchBar
+          value={search}
+          onChange={(v) => { setSearch(v); setPage(1); }}
+          placeholder="Search by name or email…"
+        />
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Role Filter */}
-          <div className="flex items-center bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-0.5 text-xs">
-            {(["all", "admin", "user"] as const).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => {
-                  setRoleFilter(r);
-                  setPage(1);
-                }}
-                className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${
-                  roleFilter === r
-                    ? "bg-[#E8854A] text-black font-semibold shadow-xs"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                {r === "all" ? "All Roles" : r}
-              </button>
-            ))}
-          </div>
+          <AdminFilterPills
+            options={[
+              { value: "all" as const, label: "All Roles" },
+              { value: "admin" as const, label: "Admin" },
+              { value: "user" as const, label: "User" },
+            ]}
+            value={roleFilter}
+            onChange={(v) => { setRoleFilter(v); setPage(1); }}
+          />
 
-          {/* Status Filter */}
-          <div className="flex items-center bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-0.5 text-xs">
-            {(["all", "active", "banned"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => {
-                  setStatusFilter(s);
-                  setPage(1);
-                }}
-                className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${
-                  statusFilter === s
-                    ? "bg-zinc-800 text-white font-semibold shadow-xs"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                {s === "all" ? "All Status" : s}
-              </button>
-            ))}
-          </div>
+          <AdminFilterPills
+            options={[
+              { value: "all" as const, label: "All Status" },
+              { value: "active" as const, label: "Active" },
+              { value: "banned" as const, label: "Banned" },
+            ]}
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v); setPage(1); }}
+            activeClassName="bg-zinc-800 text-white font-semibold shadow-xs"
+          />
         </div>
       </div>
 
@@ -411,34 +382,14 @@ export default function AdminUsersPage() {
         {renderTableBody()}
 
         {/* Pagination */}
-        {data && data.totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800/60 bg-zinc-950/40 text-xs">
-            <span className="text-zinc-500">
-              Page {data.currentPage} of {data.totalPages} ({data.total} users)
-            </span>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="h-7 text-xs border-zinc-800"
-              >
-                <ChevronLeft className="size-3.5" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= data.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                className="h-7 text-xs border-zinc-800"
-              >
-                Next
-                <ChevronRight className="size-3.5" />
-              </Button>
-            </div>
-          </div>
+        {data && (
+          <AdminPagination
+            page={data.currentPage}
+            totalPages={data.totalPages}
+            total={data.total}
+            itemLabel="users"
+            onPageChange={setPage}
+          />
         )}
       </div>
 

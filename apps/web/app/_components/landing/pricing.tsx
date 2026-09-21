@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Button } from "~/components/ui/button";
 import { ScrollReveal } from "./scroll-reveal";
 import { LandingButton } from "./landing-button";
+import { handleSpotlightMouseMove } from "~/lib/utils";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 22 };
 
@@ -73,12 +74,6 @@ const plans = [
   },
 ];
 
-function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
-
 function PlanCard({
   plan,
   annual,
@@ -100,7 +95,7 @@ function PlanCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ ...spring, delay: 0.08 * index }}
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleSpotlightMouseMove}
       className={`group relative flex flex-col rounded-[1.75rem] p-1 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
         plan.highlight
           ? "bg-linear-to-b from-[#E8854A]/20 to-[#E8854A]/5 ring-1 ring-[#E8854A]/30 hover:ring-[#E8854A]/50"

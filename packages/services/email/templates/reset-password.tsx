@@ -4,36 +4,80 @@ import {
   Container,
   Head,
   Heading,
-  Hr,
   Html,
   Link,
   Preview,
   Section,
   Text,
 } from "@react-email/components";
+import {
+  baseBody,
+  baseContainer,
+  baseHeroSection,
+  baseH1,
+  baseSubtext,
+  baseCtaSection,
+  baseButtonPrimary,
+  BrandHeader,
+  EmailFooter,
+} from "./email-shared";
 
 export interface ResetPasswordProps {
   readonly link: string;
   readonly userEmail?: string;
 }
 
+const securityPill = {
+  display: "inline-block",
+  backgroundColor: "rgba(232, 133, 74, 0.15)",
+  border: "1px solid rgba(232, 133, 74, 0.35)",
+  color: "#E8854A",
+  fontSize: "12px",
+  fontWeight: "800",
+  borderRadius: "8px",
+  padding: "4px 10px",
+  marginBottom: "12px",
+  letterSpacing: "0.05em",
+};
+
+const h1 = { ...baseH1, margin: "0 0 10px 0" };
+const subtext = { ...baseSubtext, lineHeight: "1.6", margin: "0 0 8px 0" };
+const ctaSection = { ...baseCtaSection, margin: "28px 0" };
+const buttonPrimary = { ...baseButtonPrimary, padding: "12px 30px" };
+
+const noticeCard = {
+  backgroundColor: "#161822",
+  borderRadius: "12px",
+  border: "1px solid #242736",
+  padding: "16px 20px",
+  marginBottom: "20px",
+};
+
+const noticeTitle = {
+  color: "#E5E7EB",
+  fontSize: "13px",
+  fontWeight: "700",
+  margin: "0 0 6px 0",
+};
+
+const noticeText = {
+  color: "#9CA3AF",
+  fontSize: "12px",
+  lineHeight: "1.5",
+  margin: 0,
+};
+
 export function ResetPassword({ link, userEmail }: Readonly<ResetPasswordProps>) {
   return (
     <Html>
       <Head />
       <Preview>Reset your My-Form account password</Preview>
-      <Body style={body}>
-        <Container style={container}>
-          {/* Brand Header */}
-          <Section style={headerSection}>
-            <div style={brandBadge}>
-              <span style={brandDot} />
-              <span style={brandText}>My-Form Security</span>
-            </div>
-          </Section>
+      <Body style={baseBody}>
+        <Container style={baseContainer}>
+          <BrandHeader label="My-Form Security" />
 
           {/* Hero */}
-          <Section style={heroSection}>
+          <Section style={baseHeroSection}>
             <div style={securityPill}>🔐 Password Reset Request</div>
             <Heading style={h1}>Reset Your Password</Heading>
             <Text style={subtext}>
@@ -67,168 +111,14 @@ export function ResetPassword({ link, userEmail }: Readonly<ResetPasswordProps>)
             </Text>
           </Section>
 
-          <Hr style={footerDivider} />
-
-          {/* Footer */}
-          <Section style={footerSection}>
-            <Text style={footerText}>
-              Sent securely by <strong>My-Form Authentication Service</strong>.
-            </Text>
-            <Text style={footerSubtext}>
-              Never share this link with anyone. Our team will never ask for your password.
-            </Text>
-          </Section>
+          <EmailFooter
+            mainText={<>Sent securely by <strong>My-Form Authentication Service</strong>.</>}
+            subText="Never share this link with anyone. Our team will never ask for your password."
+          />
         </Container>
       </Body>
     </Html>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
-
-const body = {
-  backgroundColor: "#07080A",
-  fontFamily:
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  padding: "24px 0",
-  margin: 0,
-};
-
-const container = {
-  maxWidth: "560px",
-  margin: "0 auto",
-  backgroundColor: "#111217",
-  borderRadius: "16px",
-  padding: "36px 32px",
-  border: "1px solid #222530",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-};
-
-const headerSection = {
-  marginBottom: "20px",
-};
-
-const brandBadge = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  backgroundColor: "#1A1C24",
-  border: "1px solid #2B2E3C",
-  borderRadius: "20px",
-  padding: "6px 14px",
-};
-
-const brandDot = {
-  display: "inline-block",
-  width: "8px",
-  height: "8px",
-  borderRadius: "50%",
-  backgroundColor: "#E8854A",
-  marginRight: "6px",
-};
-
-const brandText = {
-  color: "#FFFFFF",
-  fontSize: "13px",
-  fontWeight: "700",
-  letterSpacing: "0.05em",
-};
-
-const heroSection = {
-  marginBottom: "24px",
-};
-
-const securityPill = {
-  display: "inline-block",
-  backgroundColor: "rgba(232, 133, 74, 0.15)",
-  border: "1px solid rgba(232, 133, 74, 0.35)",
-  color: "#E8854A",
-  fontSize: "12px",
-  fontWeight: "800",
-  borderRadius: "8px",
-  padding: "4px 10px",
-  marginBottom: "12px",
-  letterSpacing: "0.05em",
-};
-
-const h1 = {
-  color: "#FFFFFF",
-  fontSize: "24px",
-  fontWeight: "700",
-  lineHeight: "1.3",
-  margin: "0 0 10px 0",
-  letterSpacing: "-0.02em",
-};
-
-const subtext = {
-  color: "#9CA3AF",
-  fontSize: "14px",
-  lineHeight: "1.6",
-  margin: "0 0 8px 0",
-};
-
-const ctaSection = {
-  textAlign: "center" as const,
-  margin: "28px 0",
-};
-
-const buttonPrimary = {
-  display: "inline-block",
-  backgroundColor: "#E8854A",
-  color: "#080808",
-  fontWeight: "700",
-  fontSize: "14px",
-  padding: "12px 30px",
-  borderRadius: "10px",
-  textDecoration: "none",
-  boxShadow: "0 4px 14px rgba(232, 133, 74, 0.4)",
-};
-
-const noticeCard = {
-  backgroundColor: "#161822",
-  borderRadius: "12px",
-  border: "1px solid #242736",
-  padding: "16px 20px",
-  marginBottom: "20px",
-};
-
-const noticeTitle = {
-  color: "#E5E7EB",
-  fontSize: "13px",
-  fontWeight: "700",
-  margin: "0 0 6px 0",
-};
-
-const noticeText = {
-  color: "#9CA3AF",
-  fontSize: "12px",
-  lineHeight: "1.5",
-  margin: 0,
-};
-
-const footerDivider = {
-  borderTop: "1px solid #1F222F",
-  margin: "24px 0 16px 0",
-};
-
-const footerSection = {
-  textAlign: "center" as const,
-};
-
-const footerText = {
-  color: "#6B7280",
-  fontSize: "12px",
-  lineHeight: "1.5",
-  margin: "0 0 4px 0",
-};
-
-const footerSubtext = {
-  color: "#4B5563",
-  fontSize: "11px",
-  lineHeight: "1.4",
-  margin: 0,
-};
 
 export default ResetPassword;

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Zap, Plus, Trash2, ChevronDown } from "lucide-react";
 import { cn } from "~/lib/utils";
+import { nanoid } from "nanoid";
 import type { FieldCondition, ConditionOperator, ConditionAction } from "@repo/forms";
 
 type Field = {
@@ -32,7 +33,20 @@ const ACTIONS: { value: ConditionAction; label: string; color: string }[] = [
 const EASE = "transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]";
 
 function generateId() {
-  return `cond_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return `cond_${Date.now()}_${nanoid(6)}`;
+}
+
+function formatConditionValue(val: unknown): string {
+  if (typeof val === "string") return val;
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  return "";
+}
+
+interface ConditionalPanelProps {
+  readonly currentFieldId: string;
+  readonly fields: readonly Field[];
+  readonly conditions: readonly FieldCondition[];
+  readonly onChange: (conditions: FieldCondition[]) => void;
 }
 
 export function ConditionalPanel({
@@ -40,12 +54,7 @@ export function ConditionalPanel({
   fields,
   conditions,
   onChange,
-}: {
-  currentFieldId: string;
-  fields: Field[];
-  conditions: FieldCondition[];
-  onChange: (conditions: FieldCondition[]) => void;
-}) {
+}: ConditionalPanelProps) {
   const [expanded, setExpanded] = useState(true);
 
   // Fields that can be sources (all fields except the current one)
@@ -179,7 +188,7 @@ export function ConditionalPanel({
                 {needsValue(condition.operator) && (
                   <input
                     type="text"
-                    value={String(condition.value ?? "")}
+                    value={formatConditionValue(condition.value)}
                     onChange={(e) =>
                       updateCondition(condition.id, { value: e.target.value })
                     }

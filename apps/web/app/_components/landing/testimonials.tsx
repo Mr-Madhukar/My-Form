@@ -3,6 +3,7 @@
 import { ScrollReveal } from "./scroll-reveal";
 import { Star, CheckCircle2 } from "lucide-react";
 import React from "react";
+import { handleSpotlightMouseMove } from "~/lib/utils";
 
 const testimonials = [
   {
@@ -28,12 +29,6 @@ const testimonials = [
   },
 ];
 
-function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
-
 function TestimonialCard({
   testimonial,
 }: {
@@ -41,7 +36,7 @@ function TestimonialCard({
 }) {
   return (
     <div
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleSpotlightMouseMove}
       className="group relative cursor-default rounded-[1.75rem] bg-white/2 p-1.5 ring-1 ring-white/6 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:ring-white/12 h-full"
     >
       {/* Spotlight border overlay — radial gradient follows cursor */}

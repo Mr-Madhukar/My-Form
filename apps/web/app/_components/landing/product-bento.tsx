@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ScrollReveal } from "./scroll-reveal";
+import { handleSpotlightMouseMove } from "~/lib/utils";
 
 function BuildCardPlaceholder() {
   return (
@@ -174,18 +175,12 @@ type BentoCard = {
   renderPlaceholder: () => React.ReactNode;
 };
 
-function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
-
 function MockBentoCard({ card }: { readonly card: BentoCard }) {
   const Icon = card.icon;
 
   return (
     <div
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleSpotlightMouseMove}
       className={`${card.span} group relative cursor-default rounded-[1.75rem] bg-white/2 p-1.5 ring-1 ring-white/6 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:ring-white/12 col-span-1`}
     >
       {/* Spotlight border overlay — radial gradient follows cursor */}

@@ -4,18 +4,29 @@ import {
   Container,
   Head,
   Heading,
-  Hr,
   Html,
   Link,
   Preview,
   Section,
   Text,
 } from "@react-email/components";
+import {
+  type AnswerItem,
+  getCurrencySymbol,
+  baseBody,
+  baseContainer,
+  baseHeroSection,
+  baseH1,
+  baseSubtext,
+  baseMetaText,
+  baseCtaSection,
+  baseButtonPrimary,
+  BrandHeader,
+  EmailFooter,
+  AnswersPreview,
+} from "./email-shared";
 
-export interface AnswerItem {
-  readonly label: string;
-  readonly value: string;
-}
+export type { AnswerItem };
 
 export interface PaymentSummary {
   readonly status: string;
@@ -39,178 +50,11 @@ export interface NewResponseEmailProps {
   readonly leadScore?: LeadScoreSummary;
 }
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  INR: "₹",
-  EUR: "€",
-  GBP: "£",
-  USD: "$",
-};
-
-function getCurrencySymbol(currency?: string): string {
-  if (!currency) return "$";
-  return CURRENCY_SYMBOLS[currency] ?? "$";
-}
-
-function getLeadScoreBadgeStyle(intent: "high" | "warm" | "low"): React.CSSProperties {
-  if (intent === "high") return highIntentBadge;
-  if (intent === "warm") return warmIntentBadge;
-  return lowIntentBadge;
-}
-
-export function NewResponseEmail({
-  formTitle,
-  responseCount,
-  responsesUrl,
-  submittedAt,
-  answersSummary = [],
-  payment,
-  leadScore,
-}: Readonly<NewResponseEmailProps>) {
-  const isPaid = payment?.status === "paid";
-  const currencySymbol = getCurrencySymbol(payment?.currency);
-
-  return (
-    <Html>
-      <Head />
-      <Preview>{`New response #${responseCount} on "${formTitle}" 🎉`}</Preview>
-      <Body style={body}>
-        <Container style={container}>
-          {/* Header */}
-          <Section style={headerSection}>
-            <div style={brandBadge}>
-              <span style={brandDot} />
-              <span style={brandText}>My-Form Notifications</span>
-            </div>
-          </Section>
-
-          {/* Title & Count */}
-          <Section style={heroSection}>
-            <div style={countPill}>Response #{responseCount}</div>
-            <Heading style={h1}>New Form Submission</Heading>
-            <Text style={subtext}>
-              Someone just submitted <strong>&quot;{formTitle}&quot;</strong>.
-            </Text>
-            {submittedAt && <Text style={metaText}>Submitted at {submittedAt}</Text>}
-          </Section>
-
-          {/* Dynamic Badges Row */}
-          {(isPaid || leadScore) && (
-            <Section style={badgesSection}>
-              {isPaid && (
-                <div style={paidBadge}>
-                  💰 {currencySymbol}
-                  {payment.amount} {payment.currency} PAID
-                </div>
-              )}
-              {leadScore && (
-                <div style={getLeadScoreBadgeStyle(leadScore.intent)}>
-                  {leadScore.intent === "high" ? "🔥" : "⚡"} {leadScore.score}/100 LEAD SCORE
-                </div>
-              )}
-            </Section>
-          )}
-
-          {/* Submitted Answers Preview */}
-          {answersSummary.length > 0 && (
-            <Section style={answersSection}>
-              <Text style={sectionTitle}>Response Preview</Text>
-              <div style={answersCard}>
-                {answersSummary.slice(0, 8).map((item, idx) => (
-                  <div
-                    key={`${item.label}-${idx}`}
-                    style={
-                      idx === Math.min(answersSummary.length, 8) - 1
-                        ? answerRowLast
-                        : answerRow
-                    }
-                  >
-                    <Text style={answerLabel}>{item.label}</Text>
-                    <Text style={answerValue}>{item.value || "—"}</Text>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* Primary CTA Button */}
-          <Section style={ctaSection}>
-            <Link href={responsesUrl} style={buttonPrimary}>
-              View Full Response in Dashboard →
-            </Link>
-          </Section>
-
-          <Hr style={footerDivider} />
-
-          {/* Footer */}
-          <Section style={footerSection}>
-            <Text style={footerText}>
-              You are receiving this email because you created <strong>{formTitle}</strong> on My-Form.
-            </Text>
-            <Text style={footerSubtext}>
-              Total lifetime responses on this form: <strong>{responseCount}</strong>
-            </Text>
-          </Section>
-        </Container>
-      </Body>
-    </Html>
-  );
-}
-
 // ---------------------------------------------------------------------------
-// Styles
+// Template-specific styles
 // ---------------------------------------------------------------------------
 
-const body = {
-  backgroundColor: "#07080A",
-  fontFamily:
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  padding: "24px 0",
-  margin: 0,
-};
-
-const container = {
-  maxWidth: "560px",
-  margin: "0 auto",
-  backgroundColor: "#111217",
-  borderRadius: "16px",
-  padding: "36px 32px",
-  border: "1px solid #222530",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-};
-
-const headerSection = {
-  marginBottom: "20px",
-};
-
-const brandBadge = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  backgroundColor: "#1A1C24",
-  border: "1px solid #2B2E3C",
-  borderRadius: "20px",
-  padding: "6px 14px",
-};
-
-const brandDot = {
-  display: "inline-block",
-  width: "8px",
-  height: "8px",
-  borderRadius: "50%",
-  backgroundColor: "#E8854A",
-  marginRight: "6px",
-};
-
-const brandText = {
-  color: "#FFFFFF",
-  fontSize: "13px",
-  fontWeight: "700",
-  letterSpacing: "0.05em",
-};
-
-const heroSection = {
-  marginBottom: "20px",
-};
+const heroSection = { ...baseHeroSection, marginBottom: "20px" };
 
 const countPill = {
   display: "inline-block",
@@ -223,29 +67,6 @@ const countPill = {
   padding: "4px 10px",
   marginBottom: "10px",
   letterSpacing: "0.05em",
-};
-
-const h1 = {
-  color: "#FFFFFF",
-  fontSize: "24px",
-  fontWeight: "700",
-  lineHeight: "1.3",
-  margin: "0 0 8px 0",
-  letterSpacing: "-0.02em",
-};
-
-const subtext = {
-  color: "#9CA3AF",
-  fontSize: "14px",
-  lineHeight: "1.5",
-  margin: "0 0 4px 0",
-};
-
-const metaText = {
-  color: "#6B7280",
-  fontSize: "12px",
-  margin: "0",
-  fontFamily: "monospace",
 };
 
 const badgesSection = {
@@ -301,89 +122,77 @@ const lowIntentBadge = {
   padding: "4px 10px",
 };
 
-const answersSection = {
-  marginBottom: "24px",
-};
+function getLeadScoreBadgeStyle(intent: "high" | "warm" | "low"): React.CSSProperties {
+  if (intent === "high") return highIntentBadge;
+  if (intent === "warm") return warmIntentBadge;
+  return lowIntentBadge;
+}
 
-const sectionTitle = {
-  color: "#9CA3AF",
-  fontSize: "12px",
-  fontWeight: "700",
-  textTransform: "uppercase" as const,
-  letterSpacing: "0.08em",
-  margin: "0 0 10px 0",
-};
+export function NewResponseEmail({
+  formTitle,
+  responseCount,
+  responsesUrl,
+  submittedAt,
+  answersSummary = [],
+  payment,
+  leadScore,
+}: Readonly<NewResponseEmailProps>) {
+  const isPaid = payment?.status === "paid";
+  const currencySymbol = getCurrencySymbol(payment?.currency);
 
-const answersCard = {
-  backgroundColor: "#161822",
-  borderRadius: "12px",
-  border: "1px solid #242736",
-  overflow: "hidden",
-};
+  return (
+    <Html>
+      <Head />
+      <Preview>{`New response #${responseCount} on "${formTitle}" 🎉`}</Preview>
+      <Body style={baseBody}>
+        <Container style={baseContainer}>
+          <BrandHeader label="My-Form Notifications" />
 
-const answerRow = {
-  padding: "12px 16px",
-  borderBottom: "1px solid #1F2230",
-};
+          {/* Title & Count */}
+          <Section style={heroSection}>
+            <div style={countPill}>Response #{responseCount}</div>
+            <Heading style={baseH1}>New Form Submission</Heading>
+            <Text style={baseSubtext}>
+              Someone just submitted <strong>&quot;{formTitle}&quot;</strong>.
+            </Text>
+            {submittedAt && <Text style={baseMetaText}>Submitted at {submittedAt}</Text>}
+          </Section>
 
-const answerRowLast = {
-  padding: "12px 16px",
-};
+          {/* Dynamic Badges Row */}
+          {(isPaid || leadScore) && (
+            <Section style={badgesSection}>
+              {isPaid && (
+                <div style={paidBadge}>
+                  💰 {currencySymbol}
+                  {payment.amount} {payment.currency} PAID
+                </div>
+              )}
+              {leadScore && (
+                <div style={getLeadScoreBadgeStyle(leadScore.intent)}>
+                  {leadScore.intent === "high" ? "🔥" : "⚡"} {leadScore.score}/100 LEAD SCORE
+                </div>
+              )}
+            </Section>
+          )}
 
-const answerLabel = {
-  color: "#9CA3AF",
-  fontSize: "11px",
-  fontWeight: "600",
-  textTransform: "uppercase" as const,
-  letterSpacing: "0.05em",
-  margin: "0 0 3px 0",
-};
+          {/* Submitted Answers Preview */}
+          <AnswersPreview title="Response Preview" items={answersSummary} maxItems={8} />
 
-const answerValue = {
-  color: "#FFFFFF",
-  fontSize: "13px",
-  lineHeight: "1.4",
-  margin: 0,
-};
+          {/* Primary CTA Button */}
+          <Section style={baseCtaSection}>
+            <Link href={responsesUrl} style={baseButtonPrimary}>
+              View Full Response in Dashboard →
+            </Link>
+          </Section>
 
-const ctaSection = {
-  textAlign: "center" as const,
-  margin: "24px 0",
-};
-
-const buttonPrimary = {
-  display: "inline-block",
-  backgroundColor: "#E8854A",
-  color: "#080808",
-  fontWeight: "700",
-  fontSize: "14px",
-  padding: "12px 28px",
-  borderRadius: "10px",
-  textDecoration: "none",
-  boxShadow: "0 4px 14px rgba(232, 133, 74, 0.4)",
-};
-
-const footerDivider = {
-  borderTop: "1px solid #1F222F",
-  margin: "24px 0 16px 0",
-};
-
-const footerSection = {
-  textAlign: "center" as const,
-};
-
-const footerText = {
-  color: "#6B7280",
-  fontSize: "12px",
-  lineHeight: "1.5",
-  margin: "0 0 4px 0",
-};
-
-const footerSubtext = {
-  color: "#4B5563",
-  fontSize: "11px",
-  lineHeight: "1.4",
-  margin: 0,
-};
+          <EmailFooter
+            mainText={<>You are receiving this email because you created <strong>{formTitle}</strong> on My-Form.</>}
+            subText={<>Total lifetime responses on this form: <strong>{responseCount}</strong></>}
+          />
+        </Container>
+      </Body>
+    </Html>
+  );
+}
 
 export default NewResponseEmail;

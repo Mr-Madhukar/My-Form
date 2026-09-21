@@ -39,23 +39,11 @@ function csvEscape(val: unknown): string {
   return str;
 }
 
-function computeChoiceSummary(values: unknown[]): string {
+function computeChoiceSummary(values: unknown[], isMultiple = false): string {
   const counts: Record<string, number> = {};
   for (const v of values) {
-    const s = String(v);
-    counts[s] = (counts[s] ?? 0) + 1;
-  }
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([opt, c]) => `${opt}: ${c}/${values.length}`)
-    .join(", ");
-}
-
-function computeMultipleChoiceSummary(values: unknown[]): string {
-  const counts: Record<string, number> = {};
-  for (const v of values) {
-    const arr = Array.isArray(v) ? v : [v];
-    for (const item of arr) {
+    const items = isMultiple && Array.isArray(v) ? v : [v];
+    for (const item of items) {
       const s = String(item);
       counts[s] = (counts[s] ?? 0) + 1;
     }
@@ -88,7 +76,7 @@ function computeFieldSummary(type: string, values: unknown[]): string {
     return computeChoiceSummary(values);
   }
   if (type === "multiple_choice") {
-    return computeMultipleChoiceSummary(values);
+    return computeChoiceSummary(values, true);
   }
   if (type === "rating" || type === "number") {
     return computeNumericSummary(values);

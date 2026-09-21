@@ -3,17 +3,15 @@ import { Resend } from "resend";
 import { env } from "../env";
 import VerifyEmail from "./templates/verify-email";
 import ResetPassword from "./templates/reset-password";
-import NewResponseEmail, {
-  type AnswerItem,
-  type PaymentSummary,
-  type LeadScoreSummary,
-} from "./templates/new-response";
-import SubmissionReceiptEmail, {
-  type PaymentReceiptInfo,
-} from "./templates/submission-receipt";
+import NewResponseEmail from "./templates/new-response";
+import type { PaymentSummary, LeadScoreSummary } from "./templates/new-response";
+import SubmissionReceiptEmail from "./templates/submission-receipt";
+import type { PaymentReceiptInfo } from "./templates/submission-receipt";
 import HotLeadAlertEmail from "./templates/hot-lead-alert";
+import type { AnswerItem } from "./templates/email-shared";
 
 export type { AnswerItem, PaymentSummary, LeadScoreSummary, PaymentReceiptInfo };
+
 
 const resend = new Resend(env.RESEND_API_KEY);
 

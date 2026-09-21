@@ -4,17 +4,15 @@ import { useState } from "react";
 import { format } from "date-fns";
 import {
   FileText,
-  Search,
   ExternalLink,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { trpc } from "~/trpc/client";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import { toast } from "sonner";
+import { AdminPagination } from "../_components/admin-pagination";
+import { AdminSearchBar } from "../_components/admin-search-bar";
+import { AdminFilterPills } from "../_components/admin-filter-pills";
 
 type AdminFormItem = {
   id: string;
@@ -200,38 +198,21 @@ export default function AdminFormsPage() {
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-zinc-900/40 p-3 rounded-2xl border border-zinc-800/60 backdrop-blur-xs">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
-          <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search by slug…"
-            className="pl-9 bg-zinc-950/60 border-zinc-800/80 text-xs h-9 text-zinc-200 placeholder:text-zinc-500 rounded-xl"
-          />
-        </div>
+        <AdminSearchBar
+          value={search}
+          onChange={(v) => { setSearch(v); setPage(1); }}
+          placeholder="Search by slug…"
+        />
 
-        <div className="flex items-center bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-0.5 text-xs">
-          {(["all", "active", "paused"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => {
-                setStatusFilter(s);
-                setPage(1);
-              }}
-              className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${
-                statusFilter === s
-                  ? "bg-[#E8854A] text-black font-semibold shadow-xs"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              {s === "all" ? "All Forms" : s}
-            </button>
-          ))}
-        </div>
+        <AdminFilterPills
+          options={[
+            { value: "all" as const, label: "All Forms" },
+            { value: "active" as const, label: "Active" },
+            { value: "paused" as const, label: "Paused" },
+          ]}
+          value={statusFilter}
+          onChange={(v) => { setStatusFilter(v); setPage(1); }}
+        />
       </div>
 
       {/* Forms Table Container */}
@@ -239,34 +220,14 @@ export default function AdminFormsPage() {
         {renderContent()}
 
         {/* Pagination */}
-        {data && data.totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800/60 bg-zinc-950/40 text-xs">
-            <span className="text-zinc-500">
-              Page {data.currentPage} of {data.totalPages} ({data.total} forms)
-            </span>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="h-7 text-xs border-zinc-800"
-              >
-                <ChevronLeft className="size-3.5" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= data.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                className="h-7 text-xs border-zinc-800"
-              >
-                Next
-                <ChevronRight className="size-3.5" />
-              </Button>
-            </div>
-          </div>
+        {data && (
+          <AdminPagination
+            page={data.currentPage}
+            totalPages={data.totalPages}
+            total={data.total}
+            itemLabel="forms"
+            onPageChange={setPage}
+          />
         )}
       </div>
     </div>

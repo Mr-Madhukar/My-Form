@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ScrollReveal } from "./scroll-reveal";
+import { handleSpotlightMouseMove } from "~/lib/utils";
 
 const items = [
   {
@@ -35,12 +36,6 @@ const items = [
   },
 ];
 
-function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
-
 function FaqItem({
   item,
   isOpen,
@@ -52,7 +47,7 @@ function FaqItem({
 }) {
   return (
     <div
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleSpotlightMouseMove}
       className="group relative rounded-2xl bg-white/2 p-1 ring-1 ring-white/6 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:ring-white/12 mb-3.5"
     >
       {/* Spotlight border overlay — radial gradient follows cursor */}

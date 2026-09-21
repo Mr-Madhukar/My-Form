@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 
 /**
  * Auth API E2E Tests
@@ -36,6 +36,34 @@ function expectStatusOrRateLimited(actual: number, expected: number) {
   expect([expected, 429]).toContain(actual);
 }
 
+/** Helper to POST to a given auth endpoint with JSON body */
+async function postAuth(
+  request: APIRequestContext,
+  endpoint: string,
+  data: Record<string, unknown>,
+) {
+  return request.post(`${API_BASE}/api/authentication/${endpoint}`, { data });
+}
+
+// ---------------------------------------------------------------------------
+// Data-driven signup validation test cases
+// ---------------------------------------------------------------------------
+
+const SIGNUP_VALIDATION_CASES = [
+  {
+    name: "rejects short password",
+    data: { email: "test-e2e@example.com", password: "123", fullName: "Test User" },
+  },
+  {
+    name: "rejects invalid email format",
+    data: { email: "not-an-email", password: "securePassword123", fullName: "Test User" },
+  },
+  {
+    name: "rejects missing fullName",
+    data: { email: "test@example.com", password: "securePassword123", fullName: "" },
+  },
+] as const;
+
 test.describe("Auth API Endpoints", () => {
   // Run serially to minimise rate-limit pressure
   test.describe.configure({ mode: "serial" });
@@ -45,49 +73,18 @@ test.describe("Auth API Endpoints", () => {
     test.skip(!reachable, `Backend not reachable at ${API_BASE} — start it with: pnpm --filter @repo/api dev`);
   });
 
-  test("POST /api/authentication/signup rejects short password", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/signup`, {
-      data: {
-        email: "test-e2e@example.com",
-        password: "123", // too short (min 8)
-        fullName: "Test User",
-      },
+  for (const { name, data } of SIGNUP_VALIDATION_CASES) {
+    test(`POST /api/authentication/signup ${name}`, async ({ request }) => {
+      const response = await postAuth(request, "signup", data);
+      // tRPC/OpenAPI returns 400 for input validation failures (or 429 if rate-limited)
+      expectStatusOrRateLimited(response.status(), 400);
     });
-
-    // tRPC/OpenAPI returns 400 for input validation failures (or 429 if rate-limited)
-    expectStatusOrRateLimited(response.status(), 400);
-  });
-
-  test("POST /api/authentication/signup rejects invalid email format", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/signup`, {
-      data: {
-        email: "not-an-email",
-        password: "securePassword123",
-        fullName: "Test User",
-      },
-    });
-
-    expectStatusOrRateLimited(response.status(), 400);
-  });
-
-  test("POST /api/authentication/signup rejects missing fullName", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/signup`, {
-      data: {
-        email: "test@example.com",
-        password: "securePassword123",
-        fullName: "", // empty, min 1
-      },
-    });
-
-    expectStatusOrRateLimited(response.status(), 400);
-  });
+  }
 
   test("POST /api/authentication/login rejects non-existent user", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/login`, {
-      data: {
-        email: `e2e-nonexistent-${Date.now()}@test.dev`,
-        password: "doesNotMatter123",
-      },
+    const response = await postAuth(request, "login", {
+      email: `e2e-nonexistent-${Date.now()}@test.dev`,
+      password: "doesNotMatter123",
     });
 
     // Should be 401 UNAUTHORIZED (INVALID_CREDENTIALS mapped) or 429 rate-limited
@@ -95,18 +92,14 @@ test.describe("Auth API Endpoints", () => {
   });
 
   test("POST /api/authentication/refresh returns 401 without refresh cookie", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/refresh`, {
-      data: {},
-    });
+    const response = await postAuth(request, "refresh", {});
 
     // No refresh_token cookie → 401
     expect(response.status()).toBe(401);
   });
 
   test("POST /api/authentication/logout succeeds even without cookies", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/logout`, {
-      data: {},
-    });
+    const response = await postAuth(request, "logout", {});
 
     // Logout is idempotent — always succeeds
     expect(response.status()).toBe(200);
@@ -116,10 +109,8 @@ test.describe("Auth API Endpoints", () => {
   });
 
   test("POST /api/authentication/forgot-password returns success for any email", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/forgot-password`, {
-      data: {
-        email: "any-email@example.com",
-      },
+    const response = await postAuth(request, "forgot-password", {
+      email: "any-email@example.com",
     });
 
     // Always returns 200 to prevent email enumeration (or 429 if rate-limited)
@@ -127,11 +118,9 @@ test.describe("Auth API Endpoints", () => {
   });
 
   test("POST /api/authentication/reset-password rejects invalid token", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/reset-password`, {
-      data: {
-        token: "fake-invalid-token-12345",
-        newPassword: "newSecurePassword123",
-      },
+    const response = await postAuth(request, "reset-password", {
+      token: "fake-invalid-token-12345",
+      newPassword: "newSecurePassword123",
     });
 
     // INVALID_RESET_TOKEN → BAD_REQUEST (or 429 if rate-limited)
@@ -139,10 +128,8 @@ test.describe("Auth API Endpoints", () => {
   });
 
   test("POST /api/authentication/verify-email rejects invalid token", async ({ request }) => {
-    const response = await request.post(`${API_BASE}/api/authentication/verify-email`, {
-      data: {
-        token: "fake-verification-token-12345",
-      },
+    const response = await postAuth(request, "verify-email", {
+      token: "fake-verification-token-12345",
     });
 
     // INVALID_VERIFICATION_TOKEN → BAD_REQUEST (or 429 if rate-limited)

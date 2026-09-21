@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import React from "react";
 import logoImg from "~/public/logo.png";
+import { handleSpotlightMouseMove } from "~/lib/utils";
 import { Menu } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -26,12 +27,6 @@ const navLinks = [
   { href: "/explore", label: "Explore" },
   { href: "#faq", label: "FAQ" },
 ];
-
-function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
 
 export function LandingNav() {
   const { user, isLoading } = useAuthStore();
@@ -92,7 +87,7 @@ export function LandingNav() {
   return (
     <header className="fixed inset-x-0 top-4 z-40 px-4">
       <div
-        onMouseMove={handleMouseMove}
+        onMouseMove={handleSpotlightMouseMove}
         className="group relative mx-auto max-w-4xl rounded-full bg-white/1 p-1 ring-1 ring-white/6 transition-all duration-500 hover:ring-white/10"
       >
         {/* Spotlight border overlay — radial gradient follows cursor */}
@@ -112,6 +107,8 @@ export function LandingNav() {
               alt="My Form"
               width={100}
               height={25}
+              priority
+              style={{ width: "auto", height: "auto" }}
               className="object-contain logo-img"
             />
           </Link>
@@ -152,6 +149,7 @@ export function LandingNav() {
                       alt="My Form"
                       width={100}
                       height={25}
+                      style={{ width: "auto", height: "auto" }}
                       className="object-contain logo-img"
                     />
                   </SheetTitle>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -25,7 +26,7 @@ import { ShareFormPopover } from "~/components/share-form-popover";
 import { trpc } from "~/trpc/client";
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
+import { cn, handleSpotlightMouseMove } from "~/lib/utils";
 import {
   Dialog,
   DialogClose,
@@ -314,12 +315,6 @@ function DuplicateDialog({
   );
 }
 
-function handleCardMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
-
 function FormCard({
   form,
   index,
@@ -340,8 +335,6 @@ function FormCard({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          role="button"
-          tabIndex={0}
           style={{ animationDelay: `${index * 70}ms` }}
           className={cn(
             SPANS[index % SPANS.length],
@@ -350,14 +343,7 @@ function FormCard({
             "transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
             "hover:ring-white/12",
           )}
-          onClick={() => router.push(`/forms/${form.id}/edit`)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              router.push(`/forms/${form.id}/edit`);
-            }
-          }}
-          onMouseMove={handleCardMouseMove}
+          onMouseMove={handleSpotlightMouseMove}
         >
           {/* Spotlight border overlay */}
           <div
@@ -374,9 +360,14 @@ function FormCard({
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <h3 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-white">
-                {form.title || "Untitled form"}
+                <Link href={`/forms/${form.id}/edit`} className="focus:outline-hidden">
+                  <span className="absolute inset-0" aria-hidden="true" />
+                  {form.title || "Untitled form"}
+                </Link>
               </h3>
-              <StatusPill status={form.status} />
+              <div className="relative z-10">
+                <StatusPill status={form.status} />
+              </div>
             </div>
 
             {/* Meta */}
@@ -389,18 +380,14 @@ function FormCard({
 
             {/* Quick actions */}
             <div
-              role="group"
-              aria-label="Card actions"
               className={cn(
-                "pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-end gap-2 p-5",
+                "pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-center justify-end gap-2 p-5",
                 "bg-linear-to-t from-[#111] via-[#111]/90 to-transparent pt-10",
                 "translate-y-2 opacity-0",
                 "transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
                 "group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100",
                 "[@media(hover:none)]:pointer-events-auto [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100",
               )}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
             >
               <QuickAction
                 icon={Pencil}

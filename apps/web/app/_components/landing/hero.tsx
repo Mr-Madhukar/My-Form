@@ -5,6 +5,7 @@ import { MessagesSquare, ChevronDown, Check, Globe, FileText } from "lucide-reac
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "~/components/ui/badge";
 import { LandingButton } from "./landing-button";
+import { handleSpotlightMouseMove } from "~/lib/utils";
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 22 };
 
@@ -165,18 +166,12 @@ const mockForms: MockForm[] = [
   },
 ];
 
-function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
-
 function MockFormCard({ form }: { readonly form: MockForm }) {
   const published = form.status === "published";
 
   return (
     <div
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleSpotlightMouseMove}
       className={`${form.span} group relative cursor-default rounded-[1.75rem] bg-white/2 p-1.5 ring-1 ring-white/6 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:ring-white/12 col-span-1`}
     >
       {/* Spotlight border overlay — radial gradient follows cursor */}

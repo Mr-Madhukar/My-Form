@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { trpc } from "~/trpc/client";
-import { cn } from "~/lib/utils";
+import { cn, handleSpotlightMouseMove } from "~/lib/utils";
 import { useAuthStore } from "~/stores/auth";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
@@ -57,12 +57,6 @@ type ExploreForm = {
   fieldCount: number;
   publishedAt: Date | string | null;
 };
-
-function handleSpotlightMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
 
 function ExploreCard({ form, index }: { readonly form: ExploreForm; readonly index: number }) {
   return (

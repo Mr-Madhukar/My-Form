@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { trpc } from "~/trpc/client";
 import { toast } from "sonner";
+import { handleSpotlightMouseMove } from "~/lib/utils";
 
 function loadRazorpayScript(): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
@@ -100,12 +101,6 @@ const plans = [
   },
 ];
 
-function handlePlanMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-  e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
-}
-
 function PlanCard({
   plan,
   annual,
@@ -190,7 +185,7 @@ function PlanCard({
       initial={{ opacity: 0, y: 32 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ ...spring, delay: 0.07 * index }}
-      onMouseMove={handlePlanMouseMove}
+      onMouseMove={handleSpotlightMouseMove}
       className={`group relative flex flex-col rounded-[1.5rem] p-px transition-all duration-500 ${borderHighlightClass}`}
     >
       {/* Spotlight glow */}
