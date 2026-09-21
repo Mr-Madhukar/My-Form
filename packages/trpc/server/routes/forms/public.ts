@@ -8,6 +8,7 @@ import {
   aiFollowupsTable,
   usersTable,
   workspaceMembersTable,
+  analyticsEventsTable,
 } from "@repo/database/schema";
 import { emailService } from "@repo/services/email";
 import { appendRowToSheet } from "@repo/services/clients/google-sheets";
@@ -527,8 +528,23 @@ export const formsPublicRouter = router({
 
       const id = await saveSubmission(published.id, parsed.data, input.followups, input.payment);
 
+      // Record form_submit event in analytics
+      try {
+        await db.insert(analyticsEventsTable).values({
+          formId: form.id,
+          eventType: "form_submit",
+          ipHash: (ctx.ip ?? "anonymous").slice(0, 64),
+        });
+      } catch (err) {
+        console.warn("[Analytics] Error recording form_submit event:", err);
+      }
+
       await Promise.all([
-        invalidateKeys(CacheKeys.formResponses(form.id), CacheKeys.formSummary(form.id)),
+        invalidateKeys(
+          CacheKeys.formResponses(form.id),
+          CacheKeys.formSummary(form.id),
+          `analytics:form:${form.id}`,
+        ),
         invalidatePattern(`form:ai-summary:${form.id}:*`),
       ]);
 
@@ -605,5 +621,41 @@ export const formsPublicRouter = router({
       );
 
       await invalidateKeys(CacheKeys.formResponses(response.formId));
+    }),
+
+  trackEvent: publicProcedure
+    .input(
+      z.object({
+        slug: z.string(),
+        eventType: z.enum(["form_view", "form_start", "form_abandon"]),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const [form] = await db
+        .select({ id: formsTable.id })
+        .from(formsTable)
+        .where(eq(formsTable.publicSlug, input.slug))
+        .limit(1);
+
+      if (!form) return { success: false };
+
+      const ip = ctx.ip ?? "anonymous";
+
+      try {
+        await db.insert(analyticsEventsTable).values({
+          formId: form.id,
+          eventType: input.eventType,
+          ipHash: ip.slice(0, 64),
+          metadata: input.metadata ?? null,
+        });
+
+        await invalidateKeys(`analytics:form:${form.id}`);
+      } catch (err) {
+        console.warn("[Analytics] Error recording analytics event:", err);
+      }
+
+      return { success: true };
     }),
 });

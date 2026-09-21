@@ -257,6 +257,24 @@ export function FormRunner({ slug, title, description, theme, fields, payment }:
 
   const submitMutation = trpc.forms.public.submit.useMutation();
   const saveFollowupsMutation = trpc.forms.public.saveFollowups.useMutation();
+  const { mutate: trackEvent } = trpc.forms.public.trackEvent.useMutation();
+  const hasTrackedViewRef = useRef(false);
+  const hasTrackedStartRef = useRef(false);
+
+  // Track form view event once when respondent opens the form
+  useEffect(() => {
+    if (!hasTrackedViewRef.current) {
+      hasTrackedViewRef.current = true;
+      trackEvent({ slug, eventType: "form_view" });
+    }
+  }, [slug, trackEvent]);
+
+  const trackStart = useCallback(() => {
+    if (!hasTrackedStartRef.current) {
+      hasTrackedStartRef.current = true;
+      trackEvent({ slug, eventType: "form_start" });
+    }
+  }, [slug, trackEvent]);
 
   const total = ordered.length;
   const current = ordered[step];
@@ -486,6 +504,9 @@ export function FormRunner({ slug, title, description, theme, fields, payment }:
     const restoredStep = Math.min(saved.step, ids.length - 1);
     form.reset({ ...defaultValues, ...saved.values });
     setStep(restoredStep);
+    if (restoredStep > 0) {
+      trackStart();
+    }
     for (const f of ordered.slice(0, restoredStep)) {
       const v = saved.values[f.id];
       if (typeof v === "string" && v.trim()) prefetchFollowup(f, v.trim());
@@ -499,6 +520,7 @@ export function FormRunner({ slug, title, description, theme, fields, payment }:
   function validateAndAdvance(rawValue: unknown) {
     if (typing || !current) return;
     setFieldError(null);
+    trackStart();
 
     // Check if this field is visible and whether it's conditionally required
     const vis = fieldVisibility.get(current.id);
@@ -865,6 +887,7 @@ export function FormRunner({ slug, title, description, theme, fields, payment }:
               <button
                 onClick={() => {
                   if (submitted) return;
+                  trackStart();
                   setChannel("submit-response");
                   setSidebarOpen(false);
                 }}
@@ -939,7 +962,10 @@ export function FormRunner({ slug, title, description, theme, fields, payment }:
                 {description && <p className="text-sm text-[#949ba4] leading-relaxed">{description}</p>}
               </div>
               <Button
-                onClick={() => setChannel("submit-response")}
+                onClick={() => {
+                  trackStart();
+                  setChannel("submit-response");
+                }}
                 className="px-6 py-2.5 rounded-xl font-semibold bg-(--form-accent) hover:bg-[color-mix(in_srgb,var(--form-accent)_95%,#000)] text-[#0a0a0a] transition-all cursor-pointer shadow-md"
               >
                 Get Started

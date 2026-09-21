@@ -1,4 +1,4 @@
-import db, { eq, and, inArray, desc, asc, isNotNull, count, sql } from "@repo/database";
+import db, { eq, and, inArray, asc, isNotNull, count, sql } from "@repo/database";
 import {
   responsesTable,
   responseAnswersTable,
@@ -6,11 +6,68 @@ import {
   formVersionsTable,
   analyticsEventsTable,
 } from "@repo/database/schema";
-import { withCache, CacheKeys } from "@repo/services/redis";
+import { withCache } from "@repo/services/redis";
 import { router, formProcedure } from "../../trpc";
 import { z } from "../../schema";
 
 const TAGS = ["Analytics"];
+
+function aggregateChoiceField(values: unknown[]): { label: string; value: number }[] {
+  const counts: Record<string, number> = {};
+  for (const v of values) {
+    const items = Array.isArray(v) ? v : [v];
+    for (const item of items) {
+      const s = String(item);
+      counts[s] = (counts[s] ?? 0) + 1;
+    }
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, value]) => ({ label, value }));
+}
+
+function aggregateRatingField(values: unknown[]): { label: string; value: number }[] {
+  const scale = 5;
+  const counts: Record<number, number> = {};
+  for (let i = 1; i <= scale; i++) counts[i] = 0;
+  for (const v of values) {
+    const n = Number(v);
+    if (!Number.isNaN(n) && n >= 1 && n <= scale) {
+      counts[n] = (counts[n] ?? 0) + 1;
+    }
+  }
+  return Object.entries(counts).map(([k, v]) => ({
+    label: `${k} star${Number(k) === 1 ? "" : "s"}`,
+    value: v,
+  }));
+}
+
+function aggregateNumberField(values: unknown[]): { label: string; value: number }[] {
+  const nums = values.map(Number).filter((n) => !Number.isNaN(n));
+  if (nums.length === 0) return [];
+  const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  return [
+    { label: "Average", value: Math.round(avg * 10) / 10 },
+    { label: "Min", value: min },
+    { label: "Max", value: max },
+    { label: "Count", value: nums.length },
+  ];
+}
+
+function aggregateFieldData(type: string, values: unknown[]): { label: string; value: number }[] {
+  if (type === "single_choice" || type === "multiple_choice") {
+    return aggregateChoiceField(values);
+  }
+  if (type === "rating") {
+    return aggregateRatingField(values);
+  }
+  if (type === "number") {
+    return aggregateNumberField(values);
+  }
+  return [];
+}
 
 export const analyticsRouter = router({
   getFormAnalytics: formProcedure
@@ -67,7 +124,7 @@ export const analyticsRouter = router({
               eq(analyticsEventsTable.eventType, "form_view"),
             ),
           );
-        const totalViews = viewsResult[0]?.value ?? 0;
+        const recordedViews = viewsResult[0]?.value ?? 0;
 
         const startsResult = await db
           .select({ value: count() })
@@ -78,10 +135,16 @@ export const analyticsRouter = router({
               eq(analyticsEventsTable.eventType, "form_start"),
             ),
           );
-        const totalStarts = startsResult[0]?.value ?? 0;
+        const recordedStarts = startsResult[0]?.value ?? 0;
+
+        // Funnel integrity rule:
+        // Any submitted response must have been started, and any started form must have been viewed.
+        // This prevents contradictory anomalies (e.g. 1 response but 0 views/starts) for historical data or if client-side telemetry was blocked.
+        const totalStarts = Math.max(recordedStarts, totalResponses);
+        const totalViews = Math.max(recordedViews, totalStarts);
 
         const completionRate =
-          totalStarts > 0 ? Math.round((totalResponses / totalStarts) * 100) : 0;
+          totalStarts > 0 ? Math.min(100, Math.round((totalResponses / totalStarts) * 100)) : 0;
 
         // Responses over time (last 30 days)
         const responsesOverTime = await db
@@ -179,52 +242,12 @@ export const analyticsRouter = router({
 
         return [...fieldMap.entries()]
           .sort((a, b) => a[1].order - b[1].order)
-          .map(([fieldId, { label, type, values }]) => {
-            let data: { label: string; value: number }[] = [];
-
-            if (type === "single_choice" || type === "multiple_choice") {
-              const counts: Record<string, number> = {};
-              for (const v of values) {
-                const items = Array.isArray(v) ? v : [v];
-                for (const item of items) {
-                  const s = String(item);
-                  counts[s] = (counts[s] ?? 0) + 1;
-                }
-              }
-              data = Object.entries(counts)
-                .sort((a, b) => b[1] - a[1])
-                .map(([label, value]) => ({ label, value }));
-            } else if (type === "rating") {
-              const scale = 5;
-              const counts: Record<number, number> = {};
-              for (let i = 1; i <= scale; i++) counts[i] = 0;
-              for (const v of values) {
-                const n = Number(v);
-                if (!isNaN(n) && n >= 1 && n <= scale) {
-                  counts[n] = (counts[n] ?? 0) + 1;
-                }
-              }
-              data = Object.entries(counts).map(([k, v]) => ({
-                label: `${k} star${Number(k) === 1 ? "" : "s"}`,
-                value: v,
-              }));
-            } else if (type === "number") {
-              const nums = values.map((v) => Number(v)).filter((n) => !isNaN(n));
-              if (nums.length > 0) {
-                const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
-                const min = Math.min(...nums);
-                const max = Math.max(...nums);
-                data = [
-                  { label: "Average", value: Math.round(avg * 10) / 10 },
-                  { label: "Min", value: min },
-                  { label: "Max", value: max },
-                  { label: "Count", value: nums.length },
-                ];
-              }
-            }
-
-            return { fieldId, label, type, data };
-          })
+          .map(([fieldId, { label, type, values }]) => ({
+            fieldId,
+            label,
+            type,
+            data: aggregateFieldData(type, values),
+          }))
           .filter((f) => f.data.length > 0);
       });
     }),
