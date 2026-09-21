@@ -15,6 +15,7 @@ import {
   ChevronRight,
   FileText,
   ExternalLink,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "~/trpc/client";
@@ -22,6 +23,18 @@ import { cn } from "~/lib/utils";
 import { FormTabs } from "../_components/form-tabs";
 
 const IMAGE_EXTENSION_REGEX = /\.(png|jpe?g|gif|webp|svg)($|\?)/i;
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  INR: "₹",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+};
+
+function getCurrencySymbol(currency?: string | null): string {
+  if (!currency) return "₹";
+  return CURRENCY_SYMBOLS[currency] ?? "₹";
+}
 
 function renderValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -171,6 +184,12 @@ interface ResponseItem {
   readonly leadIntent?: "high" | "warm" | "low" | null;
   readonly leadReason?: string | null;
   readonly leadScoredAt?: string | null;
+  readonly paymentStatus?: "paid" | "pending" | "failed" | "free" | null;
+  readonly paymentAmount?: number | null;
+  readonly paymentCurrency?: string | null;
+  readonly paymentProvider?: string | null;
+  readonly paymentId?: string | null;
+  readonly paymentPaidAt?: string | null;
   readonly answers: readonly ResponseAnswer[];
 }
 
@@ -251,6 +270,8 @@ function getLeadIntentPillClass(intent?: LeadIntent | null): string {
   return "border border-zinc-700 bg-zinc-800 text-zinc-400";
 }
 
+type PaymentFilter = "all" | "paid" | "unpaid";
+
 interface ResponsesMasterListProps {
   readonly responses: readonly ResponseItem[];
   readonly filteredResponses: readonly ResponseItem[];
@@ -263,6 +284,11 @@ interface ResponsesMasterListProps {
   readonly onFetchNextPage: () => void;
   readonly intentFilter: IntentFilter;
   readonly onIntentFilterChange: (filter: IntentFilter) => void;
+  readonly paymentFilter: PaymentFilter;
+  readonly onPaymentFilterChange: (filter: PaymentFilter) => void;
+  readonly totalRevenue: number;
+  readonly paidCount: number;
+  readonly currencySymbol: string;
   readonly sortBy: SortBy;
   readonly onSortByChange: (sort: SortBy) => void;
   readonly highCount: number;
@@ -282,6 +308,11 @@ function ResponsesMasterList({
   onFetchNextPage,
   intentFilter,
   onIntentFilterChange,
+  paymentFilter,
+  onPaymentFilterChange,
+  totalRevenue,
+  paidCount,
+  currencySymbol,
   sortBy,
   onSortByChange,
   highCount,
@@ -315,6 +346,67 @@ function ResponsesMasterList({
         )}
       </div>
 
+      {/* Revenue Counter */}
+      {totalRevenue > 0 && (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CreditCard className="size-4 text-emerald-400" />
+            <div>
+              <p className="text-[10px] text-zinc-400 leading-tight">Total Collected</p>
+              <p className="font-mono text-sm font-bold text-emerald-400 leading-none mt-0.5">
+                {currencySymbol}
+                {totalRevenue.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
+            {paidCount} Paid
+          </span>
+        </div>
+      )}
+
+      {/* Payment Filter Pills */}
+      {paidCount > 0 && (
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none text-[10px]">
+          <button
+            type="button"
+            onClick={() => onPaymentFilterChange("all")}
+            className={cn(
+              "rounded-lg px-2 py-1 font-medium transition-colors shrink-0 cursor-pointer",
+              paymentFilter === "all"
+                ? "bg-white/10 text-white"
+                : "text-zinc-500 hover:text-zinc-300",
+            )}
+          >
+            All ({responses.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => onPaymentFilterChange("paid")}
+            className={cn(
+              "flex items-center gap-1 rounded-lg px-2 py-1 font-medium transition-colors shrink-0 cursor-pointer",
+              paymentFilter === "paid"
+                ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40"
+                : "text-emerald-400/70 hover:text-emerald-300",
+            )}
+          >
+            💰 Paid ({paidCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => onPaymentFilterChange("unpaid")}
+            className={cn(
+              "rounded-lg px-2 py-1 font-medium transition-colors shrink-0 cursor-pointer",
+              paymentFilter === "unpaid"
+                ? "bg-white/10 text-white"
+                : "text-zinc-500 hover:text-zinc-300",
+            )}
+          >
+            Unpaid ({responses.length - paidCount})
+          </button>
+        </div>
+      )}
+
       {/* Intent Filter Pills */}
       <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none text-[10px]">
         <button
@@ -327,7 +419,7 @@ function ResponsesMasterList({
               : "text-zinc-500 hover:text-zinc-300",
           )}
         >
-          All ({responses.length})
+          All Leads
         </button>
         <button
           type="button"
@@ -406,9 +498,9 @@ function ResponsesMasterList({
                   isSelected ? "bg-white/6 ring-1 ring-white/10" : "hover:bg-white/3",
                 )}
               >
-                {/* Index + Lead Score + Timestamp row */}
+                {/* Index + Lead Score + Payment Badge + Timestamp row */}
                 <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <div
                       className={cn(
                         "flex items-center justify-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold transition-colors duration-200",
@@ -419,6 +511,13 @@ function ResponsesMasterList({
                     >
                       #{idx}
                     </div>
+
+                    {response.paymentStatus === "paid" && (
+                      <span className="rounded border border-emerald-500/30 bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[9px] font-bold text-emerald-400">
+                        {getCurrencySymbol(response.paymentCurrency)}
+                        {response.paymentAmount} Paid
+                      </span>
+                    )}
 
                     {response.leadScore !== undefined && response.leadScore !== null && (
                       <span
@@ -503,6 +602,42 @@ interface ResponseDetailViewProps {
   readonly onBackToList: () => void;
   readonly onScoreSingle: (responseId: string) => void;
   readonly scoringId: string | null;
+}
+
+function PaymentReceiptCard({ selected }: { readonly selected: ResponseItem }) {
+  if (selected.paymentStatus !== "paid") return null;
+
+  const symbol = getCurrencySymbol(selected.paymentCurrency);
+
+  return (
+    <div className="mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
+          <CreditCard className="size-5" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-white text-sm">
+              Payment Completed: {symbol}{selected.paymentAmount}
+            </span>
+            <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 font-mono text-[9px] font-bold">
+              VERIFIED
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1 flex-wrap">
+            <span>Provider: <span className="text-zinc-200 capitalize">{selected.paymentProvider ?? "Razorpay"}</span></span>
+            <span>·</span>
+            <span>Transaction ID: <code className="font-mono text-emerald-300 bg-white/5 px-1.5 py-0.5 rounded text-[10px]">{selected.paymentId ?? "—"}</code></span>
+          </div>
+        </div>
+      </div>
+      {selected.paymentPaidAt && (
+        <span className="text-[11px] font-mono text-zinc-500 shrink-0">
+          {format(new Date(selected.paymentPaidAt), "MMM d, yyyy · h:mm a")}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function LeadIntelligenceCard({
@@ -681,6 +816,9 @@ function ResponseDetailView({
             </div>
           </div>
 
+          {/* Payment Receipt Card */}
+          <PaymentReceiptCard selected={selected} />
+
           {/* AI Lead Intelligence Card */}
           <LeadIntelligenceCard
             selected={selected}
@@ -760,6 +898,7 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [intentFilter, setIntentFilter] = useState<IntentFilter>("all");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [scoringId, setScoringId] = useState<string | null>(null);
 
@@ -821,6 +960,21 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
   const responses = useMemo(() => q.data?.pages.flatMap((p) => p.items) ?? [], [q.data]);
   const count = q.data?.pages[0]?.total ?? 0;
 
+  const { totalRevenue, paidCount, currencySymbol } = useMemo(() => {
+    let revenue = 0;
+    let paid = 0;
+    let curr = "INR";
+    for (const r of responses) {
+      if (r.paymentStatus === "paid") {
+        revenue += r.paymentAmount ?? 0;
+        paid++;
+        if (r.paymentCurrency) curr = r.paymentCurrency;
+      }
+    }
+    const symbol = getCurrencySymbol(curr);
+    return { totalRevenue: revenue, paidCount: paid, currencySymbol: symbol };
+  }, [responses]);
+
   const { highCount, warmCount, lowCount } = useMemo(() => {
     let high = 0;
     let warm = 0;
@@ -839,6 +993,11 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
       const query = searchQuery.toLowerCase();
       list = list.filter((r) => matchResponseQuery(r, query));
     }
+    if (paymentFilter === "paid") {
+      list = list.filter((r) => r.paymentStatus === "paid");
+    } else if (paymentFilter === "unpaid") {
+      list = list.filter((r) => r.paymentStatus !== "paid");
+    }
     if (intentFilter !== "all") {
       list = list.filter((r) => r.leadIntent === intentFilter);
     }
@@ -846,7 +1005,7 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
       list = [...list].sort((a, b) => (b.leadScore ?? 0) - (a.leadScore ?? 0));
     }
     return list;
-  }, [responses, searchQuery, intentFilter, sortBy]);
+  }, [responses, searchQuery, paymentFilter, intentFilter, sortBy]);
 
   const columns = useMemo(() => extractDistinctColumns(responses), [responses]);
 
@@ -888,6 +1047,11 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
           onFetchNextPage={() => void q.fetchNextPage()}
           intentFilter={intentFilter}
           onIntentFilterChange={setIntentFilter}
+          paymentFilter={paymentFilter}
+          onPaymentFilterChange={setPaymentFilter}
+          totalRevenue={totalRevenue}
+          paidCount={paidCount}
+          currencySymbol={currencySymbol}
           sortBy={sortBy}
           onSortByChange={setSortBy}
           highCount={highCount}
@@ -929,9 +1093,16 @@ export default function ResponsesPage({ params }: { readonly params: Promise<{ r
           <span className="text-[#3A3A3A] text-xs">·</span>
           <FormTabs formId={formId} active="responses" />
           {!q.isPending && (
-            <span className="rounded-full border border-[#E8854A]/20 bg-[#E8854A]/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-[#E8854A]">
-              {count}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-full border border-[#E8854A]/20 bg-[#E8854A]/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-[#E8854A]">
+                {count}
+              </span>
+              {totalRevenue > 0 && (
+                <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-400">
+                  💰 {currencySymbol}{totalRevenue.toLocaleString()}
+                </span>
+              )}
+            </div>
           )}
         </div>
 

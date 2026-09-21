@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { useForm } from "react-hook-form";
@@ -30,6 +30,8 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { VoiceInputButton } from "./voice-input-button";
+import { PaymentCheckoutCard, type PaymentReceipt } from "./payment-checkout-card";
+import { nanoid } from "nanoid";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,13 +66,45 @@ type SavedProgress = {
   fieldIds: string[];
 };
 
+export type FormPaymentConfig = {
+  enabled: boolean;
+  provider: "razorpay" | "stripe" | "test";
+  amount: number;
+  currency: "INR" | "USD" | "EUR" | "GBP";
+  itemName: string;
+  description?: string;
+  requirePayment: boolean;
+  customKeyEnabled: boolean;
+  razorpayKeyId?: string;
+  stripePublishableKey?: string;
+};
+
 type Props = {
   slug: string;
   title: string;
   description: string | null;
   theme: FormTheme | null | undefined;
   fields: Field[];
+  payment?: FormPaymentConfig | null;
 };
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+    if ((window as unknown as { Razorpay: unknown }).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -164,7 +198,7 @@ function DoneActions({ onReset }: { readonly onReset: () => void }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function FormRunner({ slug, title, description, theme, fields }: Readonly<Props>) {
+export function FormRunner({ slug, title, description, theme, fields, payment }: Readonly<Props>) {
   const cssVars = useMemo(() => themeToCSSVars(theme), [theme]);
   const accent = cssVars["--form-accent"] ?? "#E8854A";
   const ordered = useMemo(() => [...fields].sort((a, b) => a.order - b.order), [fields]);
@@ -178,6 +212,9 @@ export function FormRunner({ slug, title, description, theme, fields }: Readonly
   const [submitted, setSubmitted] = useState(false);
   const [responseId, setResponseId] = useState<string | null>(null);
   const [channel, setChannel] = useState<"welcome" | "submit-response">("welcome");
+  const [atCheckout, setAtCheckout] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState<PaymentReceipt | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Bumped on "Submit another response" so the typing-indicator effect refires even at step 0
   const [runKey, setRunKey] = useState(0);
@@ -484,21 +521,97 @@ export function FormRunner({ slug, title, description, theme, fields }: Readonly
     // Skip hidden fields when advancing
     const nextStep = findNextVisibleStep(step + 1);
     if (nextStep >= total) {
-      void finalize();
+      if (payment?.enabled && !paymentSuccess) {
+        setAtCheckout(true);
+      } else {
+        void finalize();
+      }
     } else {
       setStep(nextStep);
     }
   }
 
   // ---------------------------------------------------------------------------
+  // Payment Handlers
+  // ---------------------------------------------------------------------------
+  async function handleRazorpayPayment() {
+    if (!payment) return;
+    setIsProcessingPayment(true);
+    setBannerError(null);
+    try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        setBannerError("Unable to load payment gateway. Please check your internet connection.");
+        return;
+      }
+
+      const key = payment.razorpayKeyId;
+      if (!key) {
+        setBannerError("Payment Gateway key is not configured for this form.");
+        return;
+      }
+
+      const options = {
+        key,
+        amount: Math.round(payment.amount * 100),
+        currency: payment.currency || "INR",
+        name: title || "My-Form",
+        description: payment.itemName || "Payment for Form Submission",
+        handler: (response: { razorpay_payment_id: string }) => {
+          const receipt: PaymentReceipt = {
+            provider: "razorpay",
+            transactionId: response.razorpay_payment_id,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: "paid",
+          };
+          setPaymentSuccess(receipt);
+          void finalize(receipt);
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessingPayment(false);
+          },
+        },
+      };
+
+      const RazorpayConstructor = (
+        window as unknown as { Razorpay: new (opts: typeof options) => { open: () => void } }
+      ).Razorpay;
+      const rzp = new RazorpayConstructor(options);
+      rzp.open();
+    } catch (err) {
+      console.error("Razorpay checkout error:", err);
+      setBannerError("Payment modal failed to open. You may use Test Payment.");
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  }
+
+  function handleTestPayment() {
+    if (!payment) return;
+    const receipt: PaymentReceipt = {
+      provider: "test",
+      transactionId: `test_pay_${nanoid(8)}`,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: "paid",
+    };
+    setPaymentSuccess(receipt);
+    void finalize(receipt);
+  }
+
+  // ---------------------------------------------------------------------------
   // Submit form
   // ---------------------------------------------------------------------------
-  async function finalize() {
+  async function finalize(receipt?: PaymentReceipt | null) {
     const values = form.getValues();
+    const activeReceipt = receipt ?? paymentSuccess;
     try {
       const { id } = await submitMutation.mutateAsync({
         slug,
         answers: values,
+        payment: activeReceipt ?? undefined,
         _gotcha: honeypotRef.current?.value ?? "",
       });
       setResponseId(id);
@@ -611,6 +724,9 @@ export function FormRunner({ slug, title, description, theme, fields }: Readonly
     setBannerError(null);
     setSubmitted(false);
     setResponseId(null);
+    setAtCheckout(false);
+    setIsProcessingPayment(false);
+    setPaymentSuccess(null);
     setAiFollowups(new Map());
     setDebrief({ tag: "idle" });
     setDebriefAnswers(new Map());
@@ -631,6 +747,66 @@ export function FormRunner({ slug, title, description, theme, fields }: Readonly
   const showDebriefFooter = debrief.tag === "active" && !!currentDebriefField && !waitingOnAi;
   const remainingFollowups =
     debrief.tag === "active" ? eligibleFollowupFields.length - debrief.index : 0;
+
+  function renderSubmitResponseContent() {
+    if (submitted) {
+      return (
+        <RunnerDebriefChatView
+          initial={initial}
+          eligibleFollowupFields={eligibleFollowupFields}
+          aiFollowups={aiFollowups}
+          debrief={debrief}
+          debriefAnswers={debriefAnswers}
+          showDebriefFooter={showDebriefFooter}
+          currentDebriefField={currentDebriefField}
+          waitingOnAi={waitingOnAi}
+          remainingFollowups={remainingFollowups}
+          saveFollowupsPending={saveFollowupsMutation.isPending}
+          threadEndRef={threadEndRef}
+          onReset={resetAll}
+          onDebriefAnswer={(fieldId, ans) => void handleDebriefAnswer(fieldId, ans)}
+          onSkipAll={() => void handleSkipAll()}
+        />
+      );
+    }
+
+    if (atCheckout && payment?.enabled) {
+      return (
+        <RunnerCheckoutView
+          payment={payment}
+          bannerError={bannerError}
+          isProcessingPayment={isProcessingPayment}
+          paymentSuccess={paymentSuccess}
+          submitPending={submitMutation.isPending}
+          onPayRazorpay={() => void handleRazorpayPayment()}
+          onPayTest={handleTestPayment}
+          onCompleteSubmit={() => void finalize(paymentSuccess)}
+          onBack={() => {
+            setAtCheckout(false);
+            setStep(total > 0 ? total - 1 : 0);
+          }}
+        />
+      );
+    }
+
+    return (
+      <RunnerQuestionSliderCard
+        title={title}
+        current={current}
+        step={step}
+        total={total}
+        typing={typing}
+        submitPending={submitMutation.isPending}
+        fieldError={fieldError}
+        bannerError={bannerError}
+        onValidateAndAdvance={validateAndAdvance}
+        onStepBack={() => {
+          setFieldError(null);
+          setStep(step - 1);
+        }}
+      />
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Render
@@ -773,198 +949,7 @@ export function FormRunner({ slug, title, description, theme, fields }: Readonly
           ) : (
             /* submit-response view */
             <div className="flex-1 flex flex-col">
-              {!submitted ? (
-                /* Question slider */
-                <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-xl mx-auto w-full">
-                  <div className="w-full bg-[#2b2d31]/40 border border-white/3 rounded-2xl p-8 shadow-xl space-y-6 flex flex-col justify-between min-h-75">
-                    <div className="space-y-4">
-                      {/* Form title watermark */}
-                      <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#949ba4] block leading-none">
-                        {title}
-                      </span>
-                      
-                      {/* Active Question */}
-                      {current ? (
-                        <div className="space-y-4">
-                          <h3 className="text-xl font-bold text-white tracking-tight leading-snug">
-                            {current.label}
-                            {current.required && <span className="text-(--form-accent) ml-1">*</span>}
-                          </h3>
-
-                          {/* Error banner */}
-                          {(fieldError || bannerError) && (
-                            <p role="alert" className="text-xs font-semibold text-red-400">
-                              {fieldError || bannerError}
-                            </p>
-                          )}
-
-                          {/* Question Input ReplyArea */}
-                          <div className="mt-2">
-                            <ReplyArea
-                              key={current.id}
-                              field={current}
-                              disabled={typing || submitMutation.isPending}
-                              pending={submitMutation.isPending}
-                              onSubmit={validateAndAdvance}
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex justify-center py-12">
-                          <Loader2 className="size-6 animate-spin text-zinc-500" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Footer / navigation */}
-                    <div className="flex items-center justify-between pt-4 border-t border-white/4 mt-auto">
-                      <div className="flex items-center gap-1.5">
-                        {step > 0 && (
-                          <Button
-                            variant="ghost"
-                            onClick={() => {
-                              setFieldError(null);
-                              setStep(step - 1);
-                            }}
-                            className="h-8 rounded-lg px-2.5 text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer"
-                          >
-                            <ArrowLeft className="size-3.5 mr-1" />
-                            Back
-                          </Button>
-                        )}
-                      </div>
-                      <span className="font-mono text-xs text-zinc-500 font-bold">
-                        {step + 1} / {total}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Chat view for AI debrief or finished success */
-                <div className="flex-1 flex flex-col justify-between overflow-hidden">
-                  {/* Message stream */}
-                  <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-                    {/* Bot initial success message */}
-                    <div className="flex items-start gap-4">
-                      <div className="size-10 rounded-full bg-[#1e1f22] flex items-center justify-center shrink-0 border border-zinc-800">
-                        <span className="text-sm font-extrabold text-(--form-accent)">{initial}</span>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">MyForm Bot</span>
-                          <span className="bg-[#5865f2] text-white text-[9px] px-1 rounded font-bold tracking-wider leading-none py-0.5">BOT</span>
-                          <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
-                        </div>
-                        <div className="text-zinc-200 text-sm leading-relaxed">
-                          Your response has been successfully submitted! Thank you.
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* AI debrief chat bubbles */}
-                    {eligibleFollowupFields.map((field, i) => {
-                      const fu = aiFollowups.get(field.id);
-                      if (!fu) return null;
-
-                      const isCurrentDebrief = debrief.tag === "active" && debrief.index === i;
-                      const isPastDebrief = debriefAnswers.has(field.id);
-                      if (!isCurrentDebrief && !isPastDebrief) return null;
-
-                      const userAnswer = debriefAnswers.get(field.id);
-
-                      return (
-                        <div key={`fu-${field.id}`} className="space-y-6">
-                          {/* AI question message */}
-                          <div className="flex items-start gap-4">
-                            <div className="size-10 rounded-full border border-[color-mix(in_srgb,var(--form-ai-accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--form-ai-accent)_15%,transparent)] flex items-center justify-center shrink-0">
-                              <Sparkles className="size-4 text-(--form-ai-accent)" />
-                            </div>
-                            <div className="space-y-1 w-full">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-white text-sm">AI Follow-up Assistant</span>
-                                <span className="bg-purple-600 text-white text-[9px] px-1 rounded font-bold tracking-wider leading-none py-0.5">AI</span>
-                                <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
-                              </div>
-                              <div className="text-zinc-200 text-sm leading-relaxed">
-                                {fu.aiQuestion ? (
-                                  fu.aiQuestion
-                                ) : (
-                                  <div className="flex items-center gap-1.5 py-1">
-                                    <Loader2 className="size-3 animate-spin text-zinc-500" />
-                                    <span className="text-xs text-zinc-500">AI is thinking...</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* User reply message */}
-                          {isPastDebrief && (
-                            <div className="flex items-start gap-4">
-                              <div className="size-10 rounded-full bg-(--form-accent) flex items-center justify-center shrink-0 font-bold text-black text-xs">
-                                U
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-white text-sm">Respondent</span>
-                                  <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
-                                </div>
-                                <div className="text-zinc-200 text-sm leading-relaxed italic bg-white/2 border border-white/5 px-3 py-2 rounded-xl">
-                                  {userAnswer ?? "Skipped follow-up."}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {/* Finished state & Done actions */}
-                    {debrief.tag === "done" && (
-                      <div className="pt-6 border-t border-white/4 max-w-md mx-auto">
-                        <DoneActions onReset={resetAll} />
-                      </div>
-                    )}
-
-                    <div ref={threadEndRef} />
-                  </div>
-
-                  {/* Debrief reply chat bar at bottom */}
-                  {showDebriefFooter && currentDebriefField && (
-                    <div className="p-4 bg-[#2b2d31] border-t border-[#1e1f22]">
-                      <div className="max-w-2xl mx-auto space-y-2">
-                        <p className="text-[10px] font-mono uppercase tracking-widest text-[#949ba4] flex items-center justify-between">
-                          <span>AI Follow-up · Question {debrief.index + 1} of {eligibleFollowupFields.length}</span>
-                          {remainingFollowups > 1 && (
-                            <button onClick={() => void handleSkipAll()} className="text-zinc-500 hover:text-white underline cursor-pointer">
-                              Skip all
-                            </button>
-                          )}
-                        </p>
-                        <FollowupReplyArea
-                          key={currentDebriefField.id}
-                          onSubmit={(a) => void handleDebriefAnswer(currentDebriefField.id, a)}
-                          onSkip={() => void handleDebriefAnswer(currentDebriefField.id, null)}
-                          pending={saveFollowupsMutation.isPending}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Loading/Streaming indicator */}
-                  {debrief.tag === "active" && waitingOnAi && (
-                    <div className="p-4 bg-[#2b2d31] border-t border-[#1e1f22] flex items-center justify-between text-xs text-zinc-400">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="size-4 animate-spin text-(--form-accent)" />
-                        AI is typing...
-                      </div>
-                      <Button onClick={() => void handleDebriefAnswer(currentDebriefField!.id, null)} className="h-8 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 cursor-pointer">
-                        Skip
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+              {renderSubmitResponseContent()}
             </div>
           )}
         </div>
@@ -1593,6 +1578,310 @@ function RatingReply({
           Next
         </Button>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Extracted Runner Subcomponents (reduces Cognitive Complexity & nesting)
+// ---------------------------------------------------------------------------
+
+type RunnerCheckoutViewProps = {
+  readonly payment: FormPaymentConfig;
+  readonly bannerError: string | null;
+  readonly isProcessingPayment: boolean;
+  readonly paymentSuccess: PaymentReceipt | null;
+  readonly submitPending: boolean;
+  readonly onPayRazorpay: () => void;
+  readonly onPayTest: () => void;
+  readonly onCompleteSubmit: () => void;
+  readonly onBack: () => void;
+};
+
+function RunnerCheckoutView({
+  payment,
+  bannerError,
+  isProcessingPayment,
+  paymentSuccess,
+  submitPending,
+  onPayRazorpay,
+  onPayTest,
+  onCompleteSubmit,
+  onBack,
+}: RunnerCheckoutViewProps) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-xl mx-auto w-full">
+      {bannerError && (
+        <p role="alert" className="text-xs font-semibold text-red-400 mb-3">
+          {bannerError}
+        </p>
+      )}
+      <PaymentCheckoutCard
+        itemName={payment.itemName}
+        amount={payment.amount}
+        currency={payment.currency}
+        description={payment.description}
+        isProcessing={isProcessingPayment}
+        paymentSuccess={paymentSuccess}
+        submitPending={submitPending}
+        onPayRazorpay={onPayRazorpay}
+        onPayTest={onPayTest}
+        onCompleteSubmit={onCompleteSubmit}
+        onBack={onBack}
+      />
+    </div>
+  );
+}
+
+type RunnerQuestionSliderCardProps = {
+  readonly title: string;
+  readonly current: Field | undefined;
+  readonly step: number;
+  readonly total: number;
+  readonly typing: boolean;
+  readonly submitPending: boolean;
+  readonly fieldError: string | null;
+  readonly bannerError: string | null;
+  readonly onValidateAndAdvance: (rawValue: unknown) => void;
+  readonly onStepBack: () => void;
+};
+
+function RunnerQuestionSliderCard({
+  title,
+  current,
+  step,
+  total,
+  typing,
+  submitPending,
+  fieldError,
+  bannerError,
+  onValidateAndAdvance,
+  onStepBack,
+}: RunnerQuestionSliderCardProps) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-xl mx-auto w-full">
+      <div className="w-full bg-[#2b2d31]/40 border border-white/3 rounded-2xl p-8 shadow-xl space-y-6 flex flex-col justify-between min-h-75">
+        <div className="space-y-4">
+          {/* Form title watermark */}
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#949ba4] block leading-none">
+            {title}
+          </span>
+
+          {/* Active Question */}
+          {current ? (
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-white tracking-tight leading-snug">
+                {current.label}
+                {current.required && <span className="text-(--form-accent) ml-1">*</span>}
+              </h3>
+
+              {/* Error banner */}
+              {(fieldError || bannerError) && (
+                <p role="alert" className="text-xs font-semibold text-red-400">
+                  {fieldError || bannerError}
+                </p>
+              )}
+
+              {/* Question Input ReplyArea */}
+              <div className="mt-2">
+                <ReplyArea
+                  key={current.id}
+                  field={current}
+                  disabled={typing || submitPending}
+                  pending={submitPending}
+                  onSubmit={onValidateAndAdvance}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center py-12">
+              <Loader2 className="size-6 animate-spin text-zinc-500" />
+            </div>
+          )}
+        </div>
+
+        {/* Footer / navigation */}
+        <div className="flex items-center justify-between pt-4 border-t border-white/4 mt-auto">
+          <div className="flex items-center gap-1.5">
+            {step > 0 && (
+              <Button
+                variant="ghost"
+                onClick={onStepBack}
+                className="h-8 rounded-lg px-2.5 text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <ArrowLeft className="size-3.5 mr-1" />
+                Back
+              </Button>
+            )}
+          </div>
+          <span className="font-mono text-xs text-zinc-500 font-bold">
+            {step + 1} / {total}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type RunnerDebriefChatViewProps = {
+  readonly initial: string;
+  readonly eligibleFollowupFields: readonly Field[];
+  readonly aiFollowups: Map<string, AiFollowup>;
+  readonly debrief: DebriefState;
+  readonly debriefAnswers: Map<string, string | null>;
+  readonly showDebriefFooter: boolean;
+  readonly currentDebriefField: Field | null;
+  readonly waitingOnAi: boolean;
+  readonly remainingFollowups: number;
+  readonly saveFollowupsPending: boolean;
+  readonly threadEndRef: RefObject<HTMLDivElement | null>;
+  readonly onReset: () => void;
+  readonly onDebriefAnswer: (fieldId: string, answer: string | null) => void;
+  readonly onSkipAll: () => void;
+};
+
+function RunnerDebriefChatView({
+  initial,
+  eligibleFollowupFields,
+  aiFollowups,
+  debrief,
+  debriefAnswers,
+  showDebriefFooter,
+  currentDebriefField,
+  waitingOnAi,
+  remainingFollowups,
+  saveFollowupsPending,
+  threadEndRef,
+  onReset,
+  onDebriefAnswer,
+  onSkipAll,
+}: RunnerDebriefChatViewProps) {
+  return (
+    <div className="flex-1 flex flex-col justify-between overflow-hidden">
+      {/* Message stream */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+        {/* Bot initial success message */}
+        <div className="flex items-start gap-4">
+          <div className="size-10 rounded-full bg-[#1e1f22] flex items-center justify-center shrink-0 border border-zinc-800">
+            <span className="text-sm font-extrabold text-(--form-accent)">{initial}</span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-white text-sm">MyForm Bot</span>
+              <span className="bg-[#5865f2] text-white text-[9px] px-1 rounded font-bold tracking-wider leading-none py-0.5">BOT</span>
+              <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
+            </div>
+            <div className="text-zinc-200 text-sm leading-relaxed">
+              Your response has been successfully submitted! Thank you.
+            </div>
+          </div>
+        </div>
+
+        {/* AI debrief chat bubbles */}
+        {eligibleFollowupFields.map((field, i) => {
+          const fu = aiFollowups.get(field.id);
+          if (!fu) return null;
+
+          const isCurrentDebrief = debrief.tag === "active" && debrief.index === i;
+          const isPastDebrief = debriefAnswers.has(field.id);
+          if (!isCurrentDebrief && !isPastDebrief) return null;
+
+          const userAnswer = debriefAnswers.get(field.id);
+
+          return (
+            <div key={`fu-${field.id}`} className="space-y-6">
+              {/* AI question message */}
+              <div className="flex items-start gap-4">
+                <div className="size-10 rounded-full border border-[color-mix(in_srgb,var(--form-ai-accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--form-ai-accent)_15%,transparent)] flex items-center justify-center shrink-0">
+                  <Sparkles className="size-4 text-(--form-ai-accent)" />
+                </div>
+                <div className="space-y-1 w-full">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm">AI Follow-up Assistant</span>
+                    <span className="bg-purple-600 text-white text-[9px] px-1 rounded font-bold tracking-wider leading-none py-0.5">AI</span>
+                    <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
+                  </div>
+                  <div className="text-zinc-200 text-sm leading-relaxed">
+                    {fu.aiQuestion ? (
+                      fu.aiQuestion
+                    ) : (
+                      <div className="flex items-center gap-1.5 py-1">
+                        <Loader2 className="size-3 animate-spin text-zinc-500" />
+                        <span className="text-xs text-zinc-500">AI is thinking...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* User reply message */}
+              {isPastDebrief && (
+                <div className="flex items-start gap-4">
+                  <div className="size-10 rounded-full bg-(--form-accent) flex items-center justify-center shrink-0 font-bold text-black text-xs">
+                    U
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white text-sm">Respondent</span>
+                      <span className="text-[10px] text-zinc-500 font-medium">Just now</span>
+                    </div>
+                    <div className="text-zinc-200 text-sm leading-relaxed italic bg-white/2 border border-white/5 px-3 py-2 rounded-xl">
+                      {userAnswer ?? "Skipped follow-up."}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Finished state & Done actions */}
+        {debrief.tag === "done" && (
+          <div className="pt-6 border-t border-white/4 max-w-md mx-auto">
+            <DoneActions onReset={onReset} />
+          </div>
+        )}
+
+        <div ref={threadEndRef} />
+      </div>
+
+      {/* Debrief reply chat bar at bottom */}
+      {showDebriefFooter && currentDebriefField && (
+        <div className="p-4 bg-[#2b2d31] border-t border-[#1e1f22]">
+          <div className="max-w-2xl mx-auto space-y-2">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#949ba4] flex items-center justify-between">
+              <span>AI Follow-up · Question {debrief.tag === "active" ? debrief.index + 1 : 1} of {eligibleFollowupFields.length}</span>
+              {remainingFollowups > 1 && (
+                <button onClick={onSkipAll} className="text-zinc-500 hover:text-white underline cursor-pointer">
+                  Skip all
+                </button>
+              )}
+            </p>
+            <FollowupReplyArea
+              key={currentDebriefField.id}
+              onSubmit={(a) => onDebriefAnswer(currentDebriefField.id, a)}
+              onSkip={() => onDebriefAnswer(currentDebriefField.id, null)}
+              pending={saveFollowupsPending}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Loading/Streaming indicator */}
+      {debrief.tag === "active" && waitingOnAi && (
+        <div className="p-4 bg-[#2b2d31] border-t border-[#1e1f22] flex items-center justify-between text-xs text-zinc-400">
+          <div className="flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin text-(--form-accent)" />
+            AI is typing...
+          </div>
+          <Button
+            onClick={() => currentDebriefField && onDebriefAnswer(currentDebriefField.id, null)}
+            className="h-8 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 cursor-pointer"
+          >
+            Skip
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

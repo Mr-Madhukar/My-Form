@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { trpc } from "~/trpc/client";
 import { FormRunner } from "./_components/form-runner";
 
-function PageShell({ children }: { children: React.ReactNode }) {
+function PageShell({ children }: { readonly children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-[#080808]">
       <div className="mx-auto w-full max-w-2xl px-5 py-16">{children}</div>
@@ -82,7 +82,7 @@ function Loading() {
   );
 }
 
-export default function PublicFormPage({ params }: { params: Promise<{ slug: string }> }) {
+export default function PublicFormPage({ params }: { readonly params: Promise<{ readonly slug: string }> }) {
   const { slug } = use(params);
   const query = trpc.forms.public.getBySlug.useQuery({ slug });
 
@@ -102,6 +102,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
       description={data.version.description}
       theme={data.version.theme}
       fields={data.fields}
+      payment={data.version.payment}
     />
   );
 }

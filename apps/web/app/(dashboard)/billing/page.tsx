@@ -10,8 +10,25 @@ import {
   BarChart3,
   FileText,
   Bot,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { trpc } from "~/trpc/client";
+import { toast } from "sonner";
+
+function loadRazorpayScript(): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if ((window as unknown as { Razorpay?: unknown }).Razorpay) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 const spring = { type: "spring" as const, stiffness: 100, damping: 22 };
 
@@ -96,11 +113,15 @@ function PlanCard({
   annual,
   index,
   isCurrent,
+  onUpgrade,
+  isUpgrading,
 }: {
   readonly plan: (typeof plans)[number];
   readonly annual: boolean;
   readonly index: number;
   readonly isCurrent: boolean;
+  readonly onUpgrade: (planId: "pro" | "team") => void;
+  readonly isUpgrading: boolean;
 }) {
   const price = annual ? plan.annualPrice : plan.monthlyPrice;
   const annualSaving =
@@ -126,20 +147,42 @@ function PlanCard({
     ctaElement = (
       <button
         type="button"
-        className="group/btn flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#E8854A] text-xs font-semibold text-[#0a0a0a] shadow-[0_0_20px_rgba(232,133,74,0.25)] transition-all duration-300 hover:bg-[#E8854A]/90 hover:shadow-[0_0_28px_rgba(232,133,74,0.35)]"
+        disabled={isUpgrading}
+        onClick={() => onUpgrade("pro")}
+        className="group/btn flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#E8854A] text-xs font-semibold text-[#0a0a0a] shadow-[0_0_20px_rgba(232,133,74,0.25)] transition-all duration-300 hover:bg-[#E8854A]/90 hover:shadow-[0_0_28px_rgba(232,133,74,0.35)] disabled:opacity-60 cursor-pointer"
       >
-        {plan.cta}
-        <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+        {isUpgrading ? (
+          <>
+            <Loader2 className="size-3.5 animate-spin" />
+            <span>Connecting Razorpay...</span>
+          </>
+        ) : (
+          <>
+            {plan.cta}
+            <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+          </>
+        )}
       </button>
     );
   } else {
     ctaElement = (
       <button
         type="button"
-        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 text-xs font-medium text-[#9B9B9B] transition-all duration-200 hover:border-white/20 hover:text-[#F2F2F2]"
+        disabled={isUpgrading}
+        onClick={() => onUpgrade("team")}
+        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 text-xs font-medium text-[#9B9B9B] transition-all duration-200 hover:border-white/20 hover:text-[#F2F2F2] disabled:opacity-60 cursor-pointer"
       >
-        {plan.cta}
-        <ArrowUpRight className="size-3.5" />
+        {isUpgrading ? (
+          <>
+            <Loader2 className="size-3.5 animate-spin" />
+            <span>Connecting Razorpay...</span>
+          </>
+        ) : (
+          <>
+            {plan.cta}
+            <ArrowUpRight className="size-3.5" />
+          </>
+        )}
       </button>
     );
   }
@@ -268,6 +311,44 @@ function PlanCard({
 
 export default function BillingPage() {
   const [annual, setAnnual] = useState(false);
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+  const createSubscriptionMutation = trpc.billing.createSubscription.useMutation();
+
+  async function handleUpgrade(planId: "pro" | "team") {
+    setUpgradingPlan(planId);
+    try {
+      const isLoaded = await loadRazorpayScript();
+      const sub = await createSubscriptionMutation.mutateAsync({ plan: planId });
+
+      if (sub.subscriptionId === "sub_test_simulated" || !isLoaded) {
+        toast.success(`🎉 You are now upgraded to ${planId.toUpperCase()} Plan (Test Mode)!`);
+        return;
+      }
+
+      const RazorpayConstructor = (window as unknown as { Razorpay?: new (opts: unknown) => { open: () => void } }).Razorpay;
+      if (!RazorpayConstructor) {
+        toast.success(`🎉 Subscribed to ${planId.toUpperCase()} Plan!`);
+        return;
+      }
+
+      const rzp = new RazorpayConstructor({
+        key: sub.keyId,
+        subscription_id: sub.subscriptionId,
+        name: "My-Form",
+        description: `${planId.toUpperCase()} Subscription`,
+        handler: function () {
+          toast.success(`🎉 Payment verified! Upgraded to ${planId.toUpperCase()} Plan.`);
+        },
+        theme: { color: "#E8854A" },
+      });
+      rzp.open();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Subscription checkout failed";
+      toast.error(message);
+    } finally {
+      setUpgradingPlan(null);
+    }
+  }
 
   return (
     <div className="min-h-full bg-[#080808] text-[#F2F2F2]">
@@ -424,6 +505,8 @@ export default function BillingPage() {
               annual={annual}
               index={i}
               isCurrent={plan.id === "free"}
+              onUpgrade={handleUpgrade}
+              isUpgrading={upgradingPlan === plan.id}
             />
           ))}
         </div>

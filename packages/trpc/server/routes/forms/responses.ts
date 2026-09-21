@@ -288,6 +288,23 @@ export const formsResponsesRouter = router({
           const leadReason = typeof meta.leadReason === "string" ? meta.leadReason : null;
           const leadScoredAt = typeof meta.leadScoredAt === "string" ? meta.leadScoredAt : null;
 
+          const paymentData = (meta.payment ?? {}) as Record<string, unknown>;
+          const paymentStatus: "paid" | "pending" | "failed" | "free" | null =
+            paymentData.status === "paid" ||
+            paymentData.status === "pending" ||
+            paymentData.status === "failed" ||
+            paymentData.status === "free"
+              ? (paymentData.status as "paid" | "pending" | "failed" | "free")
+              : null;
+          const paymentAmount = typeof paymentData.amount === "number" ? paymentData.amount : null;
+          const paymentCurrency =
+            typeof paymentData.currency === "string" ? paymentData.currency : null;
+          const paymentProvider =
+            typeof paymentData.provider === "string" ? paymentData.provider : null;
+          const paymentId =
+            typeof paymentData.transactionId === "string" ? paymentData.transactionId : null;
+          const paymentPaidAt = typeof paymentData.paidAt === "string" ? paymentData.paidAt : null;
+
           return {
             id: r.id,
             completedAt: r.completedAt,
@@ -295,6 +312,12 @@ export const formsResponsesRouter = router({
             leadIntent,
             leadReason,
             leadScoredAt,
+            paymentStatus,
+            paymentAmount,
+            paymentCurrency,
+            paymentProvider,
+            paymentId,
+            paymentPaidAt,
             answers: byResponse.get(r.id) ?? [],
           };
         });
@@ -313,7 +336,7 @@ export const formsResponsesRouter = router({
     }),
 
   exportCsv: formProcedure
-    .meta({ openapi: { method: "GET", path: "/forms/{formId}/responses/export", tags: TAGS } })
+    .meta({ openapi: { method: "GET", path: "/forms/{formId}/responses/export-csv", tags: TAGS } })
     .input(z.object({ formId: z.string() }))
     .output(z.object({ csv: z.string(), filename: z.string() }))
     .query(async ({ ctx }) => {
@@ -323,9 +346,21 @@ export const formsResponsesRouter = router({
         .where(eq(formVersionsTable.formId, ctx.form.id))
         .orderBy(desc(formVersionsTable.versionNumber));
 
-      const formTitle = versions[0]?.title ?? "Untitled";
+      const formTitle = versions[0]?.title ?? "Untitled form";
       const versionIds = versions.map((v) => v.id);
       if (versionIds.length === 0) return { csv: "", filename: `${formTitle}-responses.csv` };
+
+      const fields = await db
+        .select({ id: formFieldsTable.id, label: formFieldsTable.label, order: formFieldsTable.order })
+        .from(formFieldsTable)
+        .where(inArray(formFieldsTable.formVersionId, versionIds))
+        .orderBy(asc(formFieldsTable.order));
+
+      const colMap = new Map<string, { label: string; order: number }>();
+      for (const f of fields) {
+        if (!colMap.has(f.id)) colMap.set(f.id, { label: f.label || "Untitled", order: f.order });
+      }
+      const columns = [...colMap.entries()].sort((a, b) => a[1].order - b[1].order);
 
       const responses = await db
         .select({
@@ -342,33 +377,19 @@ export const formsResponsesRouter = router({
         )
         .orderBy(desc(responsesTable.completedAt));
 
-      if (responses.length === 0) return { csv: "", filename: `${formTitle}-responses.csv` };
-
       const responseIds = responses.map((r) => r.id);
+      const answers =
+        responseIds.length > 0
+          ? await db
+              .select({
+                responseId: responseAnswersTable.responseId,
+                fieldId: responseAnswersTable.fieldId,
+                value: responseAnswersTable.value,
+              })
+              .from(responseAnswersTable)
+              .where(inArray(responseAnswersTable.responseId, responseIds))
+          : [];
 
-      const answers = await db
-        .select({
-          responseId: responseAnswersTable.responseId,
-          fieldId: responseAnswersTable.fieldId,
-          value: responseAnswersTable.value,
-          label: formFieldsTable.label,
-          order: formFieldsTable.order,
-        })
-        .from(responseAnswersTable)
-        .innerJoin(formFieldsTable, eq(formFieldsTable.id, responseAnswersTable.fieldId))
-        .where(inArray(responseAnswersTable.responseId, responseIds))
-        .orderBy(asc(formFieldsTable.order));
-
-      // Build ordered columns
-      const columnMap = new Map<string, { label: string; order: number }>();
-      for (const a of answers) {
-        if (!columnMap.has(a.fieldId)) {
-          columnMap.set(a.fieldId, { label: a.label, order: a.order });
-        }
-      }
-      const columns = [...columnMap.entries()].sort((a, b) => a[1].order - b[1].order);
-
-      // Build answer index
       const answerIndex = new Map<string, Map<string, unknown>>();
       for (const a of answers) {
         let responseMap = answerIndex.get(a.responseId);
@@ -383,6 +404,11 @@ export const formsResponsesRouter = router({
       const header = [
         "#",
         "Submitted At",
+        "Payment Status",
+        "Payment Amount",
+        "Payment Currency",
+        "Payment Provider",
+        "Payment ID",
         "Lead Score",
         "Lead Intent",
         "Lead Reason",
@@ -391,11 +417,23 @@ export const formsResponsesRouter = router({
       const rows = responses.map((r, i) => {
         const responseAnswers = answerIndex.get(r.id);
         const meta = (r.metadata ?? {}) as Record<string, unknown>;
+        const paymentData = (meta.payment ?? {}) as Record<string, unknown>;
+        const payStatus = typeof paymentData.status === "string" ? paymentData.status : "";
+        const payAmount = typeof paymentData.amount === "number" ? String(paymentData.amount) : "";
+        const payCurrency = typeof paymentData.currency === "string" ? paymentData.currency : "";
+        const payProvider = typeof paymentData.provider === "string" ? paymentData.provider : "";
+        const payId =
+          typeof paymentData.transactionId === "string" ? paymentData.transactionId : "";
         const scoreStr = typeof meta.leadScore === "number" ? String(meta.leadScore) : "";
         const intentStr = typeof meta.leadIntent === "string" ? meta.leadIntent : "";
         const cells = [
           String(i + 1),
           r.completedAt ? new Date(r.completedAt).toISOString() : "",
+          payStatus,
+          payAmount,
+          payCurrency,
+          payProvider,
+          payId,
           scoreStr,
           intentStr,
           csvEscape(meta.leadReason ?? ""),

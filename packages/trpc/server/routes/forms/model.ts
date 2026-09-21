@@ -67,6 +67,22 @@ export const formListItemSchema = z.object({
   status: z.string().describe("Status of the most relevant version (draft | published)"),
 });
 
+export const formPaymentConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  provider: z.enum(["razorpay", "stripe", "test"]).default("razorpay"),
+  amount: z.number().min(1).default(499),
+  currency: z.enum(["INR", "USD", "EUR", "GBP"]).default("INR"),
+  itemName: z.string().default("Registration / Ticket Pass"),
+  description: z.string().optional(),
+  requirePayment: z.boolean().default(true),
+  customKeyEnabled: z.boolean().default(false),
+  razorpayKeyId: z.string().optional(),
+  stripePublishableKey: z.string().optional(),
+  testMode: z.boolean().default(false),
+});
+
+export type FormPaymentConfig = z.infer<typeof formPaymentConfigSchema>;
+
 export const publicFormSchema = z.object({
   form: z
     .object({
@@ -81,6 +97,7 @@ export const publicFormSchema = z.object({
       title: z.string().describe("Form title"),
       description: z.string().nullable().describe("Optional form description"),
       theme: themeSchema.nullable().describe("Theme configuration"),
+      payment: formPaymentConfigSchema.nullable().optional().describe("Payment collection settings"),
     })
     .describe("Published version metadata"),
   fields: z.array(fieldOutputSchema).describe("Ordered list of form fields"),
@@ -107,6 +124,12 @@ export const responseListItemSchema = z.object({
   leadIntent: z.enum(["high", "warm", "low"]).nullable().optional().describe("Lead intent level"),
   leadReason: z.string().nullable().optional().describe("AI explanation for lead score"),
   leadScoredAt: z.string().nullable().optional().describe("When the lead was scored"),
+  paymentStatus: z.enum(["paid", "pending", "failed", "free"]).nullable().optional().describe("Payment status"),
+  paymentAmount: z.number().nullable().optional().describe("Amount paid"),
+  paymentCurrency: z.string().nullable().optional().describe("Currency e.g. INR"),
+  paymentProvider: z.string().nullable().optional().describe("Payment provider e.g. razorpay, test"),
+  paymentId: z.string().nullable().optional().describe("Transaction or Payment ID"),
+  paymentPaidAt: z.string().nullable().optional().describe("When payment was completed"),
   answers: z.array(responseAnswerSchema).describe("Answers ordered by field order"),
 });
 

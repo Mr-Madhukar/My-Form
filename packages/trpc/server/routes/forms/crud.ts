@@ -4,7 +4,8 @@ import { nanoid } from "nanoid";
 import { withCache, invalidateKeys, CacheKeys } from "@repo/services/redis";
 import { z } from "../../schema";
 import { workspaceProcedure, formProcedure } from "../../trpc";
-import { formWithVersionSchema, formListItemSchema } from "./model";
+import { env } from "@repo/services/env";
+import { formWithVersionSchema, formListItemSchema, formPaymentConfigSchema } from "./model";
 
 const TAGS = ["Forms"];
 
@@ -259,3 +260,64 @@ export const toggleLeadScoring = formProcedure
     await invalidateKeys(CacheKeys.formSlug(ctx.form.publicSlug));
     return { success: true, enabled: input.enabled };
   });
+
+export const getPaymentConfig = formProcedure
+  .meta({ openapi: { method: "GET", path: "/forms/{formId}/payment", tags: TAGS } })
+  .input(z.object({ formId: z.string() }))
+  .output(
+    z.object({
+      config: formPaymentConfigSchema,
+      platformKeyConfigured: z.boolean(),
+    }),
+  )
+  .query(async ({ ctx }) => {
+    const [version] = await db
+      .select({ settings: formVersionsTable.settings })
+      .from(formVersionsTable)
+      .where(eq(formVersionsTable.formId, ctx.form.id))
+      .orderBy(desc(formVersionsTable.versionNumber))
+      .limit(1);
+
+    const settings = (version?.settings ?? {}) as Record<string, unknown>;
+    const rawPayment = (settings.payment ?? {}) as Record<string, unknown>;
+    const parsed = formPaymentConfigSchema.safeParse(rawPayment);
+    const config = parsed.success ? parsed.data : formPaymentConfigSchema.parse({});
+
+    return {
+      config,
+      platformKeyConfigured: Boolean(env.NEXT_PUBLIC_RAZORPAY_KEY_ID || env.RAZORPAY_KEY_ID),
+    };
+  });
+
+export const updatePaymentConfig = formProcedure
+  .meta({ openapi: { method: "POST", path: "/forms/{formId}/payment", tags: TAGS } })
+  .input(
+    z.object({
+      formId: z.string(),
+      config: formPaymentConfigSchema,
+    }),
+  )
+  .output(z.object({ success: z.boolean(), config: formPaymentConfigSchema }))
+  .mutation(async ({ ctx, input }) => {
+    const versions = await db
+      .select({ id: formVersionsTable.id, settings: formVersionsTable.settings })
+      .from(formVersionsTable)
+      .where(eq(formVersionsTable.formId, ctx.form.id));
+
+    for (const v of versions) {
+      const current = (v.settings ?? {}) as Record<string, unknown>;
+      await db
+        .update(formVersionsTable)
+        .set({
+          settings: {
+            ...current,
+            payment: input.config,
+          },
+        })
+        .where(eq(formVersionsTable.id, v.id));
+    }
+
+    await invalidateKeys(CacheKeys.formSlug(ctx.form.publicSlug));
+    return { success: true, config: input.config };
+  });
+

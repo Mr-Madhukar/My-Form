@@ -24,7 +24,8 @@ import {
 } from "@repo/services/redis";
 import { z, zodUndefinedModel } from "../../schema";
 import { publicProcedure, router } from "../../trpc";
-import { publicFormSchema, followupInputSchema, exploreFormSchema } from "./model";
+import { env } from "@repo/services/env";
+import { publicFormSchema, followupInputSchema, exploreFormSchema, formPaymentConfigSchema } from "./model";
 
 const TAGS = ["Public Forms"];
 
@@ -72,11 +73,31 @@ async function saveSubmission(
   formVersionId: string,
   answers: Record<string, unknown>,
   followups?: Array<{ fieldId: string; aiQuestion: string; userAnswer?: string | null }>,
+  payment?: {
+    provider: string;
+    transactionId: string;
+    amount: number;
+    currency: string;
+    status: string;
+  },
 ): Promise<string> {
   return await db.transaction(async (tx) => {
+    const metadata: Record<string, unknown> = {};
+    if (payment) {
+      metadata.payment = {
+        ...payment,
+        paidAt: new Date().toISOString(),
+      };
+    }
+
     const [response] = await tx
       .insert(responsesTable)
-      .values({ formVersionId, responseToken: nanoid(), completedAt: new Date() })
+      .values({
+        formVersionId,
+        responseToken: nanoid(),
+        completedAt: new Date(),
+        metadata: Object.keys(metadata).length > 0 ? metadata : null,
+      })
       .returning();
 
     const entries = Object.entries(answers);
@@ -263,13 +284,35 @@ export const formsPublicRouter = router({
           .where(eq(formFieldsTable.formVersionId, published.id))
           .orderBy(asc(formFieldsTable.order));
 
+        const settings = (published.settings ?? {}) as Record<string, unknown>;
+        const rawPayment = (settings.payment ?? {}) as Record<string, unknown>;
+        let paymentConfig = null;
+        if (rawPayment.enabled) {
+          const parsed = formPaymentConfigSchema.safeParse(rawPayment);
+          if (parsed.success) {
+            paymentConfig = {
+              ...parsed.data,
+              razorpayKeyId:
+                parsed.data.customKeyEnabled && parsed.data.razorpayKeyId
+                  ? parsed.data.razorpayKeyId
+                  : env.NEXT_PUBLIC_RAZORPAY_KEY_ID || env.RAZORPAY_KEY_ID || "",
+            };
+          }
+        }
+
         return {
           form: {
             id: form.id,
             publicSlug: form.publicSlug,
             isAcceptingResponses: form.isAcceptingResponses,
           },
-          version: { id: published.id, title: published.title, description: published.description, theme: themeSchema.nullable().safeParse(published.theme).data ?? null },
+          version: {
+            id: published.id,
+            title: published.title,
+            description: published.description,
+            theme: themeSchema.nullable().safeParse(published.theme).data ?? null,
+            payment: paymentConfig,
+          },
           fields: fields.map((f) => ({
             ...f,
             config: (f.config ?? {}) as Record<string, unknown>,
@@ -285,6 +328,15 @@ export const formsPublicRouter = router({
         slug: z.string(),
         answers: z.record(z.string(), z.unknown()),
         followups: z.array(followupInputSchema).optional(),
+        payment: z
+          .object({
+            provider: z.string(),
+            transactionId: z.string(),
+            amount: z.number(),
+            currency: z.string(),
+            status: z.string(),
+          })
+          .optional(),
         _gotcha: z.string().optional(),
       }),
     )
@@ -322,6 +374,14 @@ export const formsPublicRouter = router({
       const publishedSettings = (published.settings ?? {}) as Record<string, unknown>;
       await validateFormLimits(publishedSettings, published.id);
 
+      // Verify payment requirement if enabled
+      const rawPayment = (publishedSettings.payment ?? {}) as Record<string, unknown>;
+      if (rawPayment.enabled && rawPayment.requirePayment !== false) {
+        if (input.payment?.status !== "paid") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "payment_required" });
+        }
+      }
+
       const fields = await db
         .select()
         .from(formFieldsTable)
@@ -334,7 +394,7 @@ export const formsPublicRouter = router({
       const parsed = schema.safeParse(input.answers);
       if (!parsed.success) throw new TRPCError({ code: "BAD_REQUEST", message: "invalid_answers" });
 
-      const id = await saveSubmission(published.id, parsed.data, input.followups);
+      const id = await saveSubmission(published.id, parsed.data, input.followups, input.payment);
 
       await Promise.all([
         invalidateKeys(CacheKeys.formResponses(form.id), CacheKeys.formSummary(form.id)),

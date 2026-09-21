@@ -17,6 +17,8 @@ export const formsRouter = router({
   disconnectGoogleSheets: crud.disconnectGoogleSheets,
   getLeadScoring: crud.getLeadScoring,
   toggleLeadScoring: crud.toggleLeadScoring,
+  getPaymentConfig: crud.getPaymentConfig,
+  updatePaymentConfig: crud.updatePaymentConfig,
   versions: formsVersionsRouter,
   public: formsPublicRouter,
   responses: formsResponsesRouter,
