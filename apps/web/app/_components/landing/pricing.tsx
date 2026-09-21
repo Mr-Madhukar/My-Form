@@ -33,8 +33,8 @@ const plans = [
     id: "pro",
     name: "Pro",
     badge: "Most popular",
-    monthlyPrice: 9,
-    annualPrice: 7,
+    monthlyPrice: 299,
+    annualPrice: 239,
     description: "Everything you need to capture deeper answers at scale.",
     cta: "Start Pro",
     ctaHref: "/signup?plan=pro",
@@ -54,8 +54,8 @@ const plans = [
     id: "team",
     name: "Team",
     badge: null,
-    monthlyPrice: 19,
-    annualPrice: 15,
+    monthlyPrice: 999,
+    annualPrice: 799,
     description: "For teams that need collaboration, analytics, and integrations.",
     cta: "Start Team",
     ctaHref: "/signup?plan=team",
@@ -152,7 +152,7 @@ function PlanCard({
               transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
               className="text-4xl font-semibold tracking-tighter text-[#F2F2F2] leading-none"
             >
-              {price === 0 ? "Free" : `$${price}`}
+              {price === 0 ? "Free" : `₹${price.toLocaleString("en-IN")}`}
             </motion.span>
           </AnimatePresence>
           {price > 0 && <span className="mb-0.5 text-xs text-zinc-400">/ mo</span>}
@@ -171,7 +171,7 @@ function PlanCard({
         <div className="mt-1 h-4">
           {annual && plan.monthlyPrice > 0 && (
             <p className="font-mono text-[10px] text-zinc-400">
-              Billed annually · ${plan.annualPrice * 12}/yr
+              Billed annually · ₹{(plan.annualPrice * 12).toLocaleString("en-IN")}/yr
             </p>
           )}
         </div>
@@ -270,7 +270,7 @@ export function Pricing() {
                     transition={{ duration: 0.2 }}
                     className="font-mono text-[9px] font-semibold text-emerald-400"
                   >
-                    Save up to 22%
+                    Save 20%
                   </motion.span>
                 )}
               </AnimatePresence>
