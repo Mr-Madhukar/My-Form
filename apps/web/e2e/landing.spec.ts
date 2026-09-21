@@ -3,23 +3,29 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * Helper: open the mobile nav Sheet and return the dialog locator.
  *
- * Radix UI's Dialog (used by the Sheet component) renders inside a Portal
- * with a 500ms slide-in animation. On slow CI runners the element can take
- * a beat to become visible, so we:
- *   1. Click the hamburger menu button.
- *   2. Wait for the `[role="dialog"]` element to attach to the DOM.
- *   3. Assert it is visible with a generous timeout (10 s).
+ * The landing page is server-side rendered — the hamburger button appears in
+ * the DOM *before* React hydrates the event handlers. A click that lands
+ * before hydration is a no-op, so the dialog never mounts.
+ *
+ * We work around this with Playwright's `toPass()` retry pattern: the block
+ * is re-executed (click → assert) until the dialog actually opens.
  */
 async function openMobileMenu(page: Page) {
   const menuButton = page.getByRole("button", { name: /open menu/i });
   await expect(menuButton).toBeVisible();
-  await menuButton.click();
+
+  // Let the network settle — gives React time to hydrate
+  await page.waitForLoadState("networkidle");
 
   const dialog = page.getByRole("dialog");
-  // Wait until the portal element is in the DOM (not necessarily visible yet)
-  await dialog.waitFor({ state: "attached", timeout: 10_000 });
-  // Then assert it is fully visible (animation complete)
-  await expect(dialog).toBeVisible({ timeout: 10_000 });
+
+  // Retry: click the trigger and assert the dialog is visible.
+  // If hydration hasn't finished yet the click is inert and the assertion
+  // throws, which causes toPass() to retry after a short interval.
+  await expect(async () => {
+    await menuButton.click();
+    await expect(dialog).toBeVisible({ timeout: 2_000 });
+  }).toPass({ intervals: [500, 1_000, 2_000], timeout: 15_000 });
 
   return dialog;
 }
