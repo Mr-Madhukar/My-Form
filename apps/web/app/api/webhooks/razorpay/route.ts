@@ -15,7 +15,11 @@ function isSignatureValid(rawBody: string, signature: string | null, secret?: st
   // Secret IS configured but request has no signature → reject
   if (!signature) return false;
   const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  const expectedBuf = Buffer.from(expected);
+  const signatureBuf = Buffer.from(signature);
+  // timingSafeEqual throws if lengths differ — reject outright
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, signatureBuf);
 }
 
 interface SubscriptionEntity {
@@ -148,22 +152,29 @@ export async function POST(req: NextRequest) {
 
     const payload = (event as Record<string, unknown>)?.payload as Record<string, unknown> | undefined;
 
-    if (eventType === "subscription.activated" || eventType === "subscription.charged") {
-      await handleSubscriptionActivated(
-        (payload?.subscription as Record<string, unknown>)?.entity as SubscriptionEntity | undefined,
-      );
-    } else if (eventType === "payment.captured") {
-      await handlePaymentCaptured(
-        (payload?.payment as Record<string, unknown>)?.entity as PaymentEntity | undefined,
-      );
-    } else if (
-      eventType === "subscription.cancelled" ||
-      eventType === "subscription.halted" ||
-      eventType === "subscription.completed"
-    ) {
-      await handleSubscriptionCancelled(
-        (payload?.subscription as Record<string, unknown>)?.entity as SubscriptionEntity | undefined,
-      );
+    try {
+      if (eventType === "subscription.activated" || eventType === "subscription.charged") {
+        await handleSubscriptionActivated(
+          (payload?.subscription as Record<string, unknown>)?.entity as SubscriptionEntity | undefined,
+        );
+      } else if (eventType === "payment.captured") {
+        await handlePaymentCaptured(
+          (payload?.payment as Record<string, unknown>)?.entity as PaymentEntity | undefined,
+        );
+      } else if (
+        eventType === "subscription.cancelled" ||
+        eventType === "subscription.halted" ||
+        eventType === "subscription.completed"
+      ) {
+        await handleSubscriptionCancelled(
+          (payload?.subscription as Record<string, unknown>)?.entity as SubscriptionEntity | undefined,
+        );
+      }
+    } catch (dbError) {
+      // DB may be unreachable (e.g. CI without a database).
+      // Log the error but still acknowledge the webhook so the
+      // provider does not keep retrying endlessly.
+      console.error(`[Razorpay Webhook] DB error while handling ${eventType}:`, dbError);
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
