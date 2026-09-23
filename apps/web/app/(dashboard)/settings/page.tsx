@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "~/stores/auth";
 import { Button } from "~/components/ui/button";
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import {
   User,
   Bell,
@@ -87,6 +87,9 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
                   <Avatar className="size-14 ring-2 ring-[#E8854A]/30">
+                    {user?.profileImageUrl && (
+                      <AvatarImage src={user.profileImageUrl} alt={user.fullName || "User"} />
+                    )}
                     <AvatarFallback className="bg-linear-to-tr from-zinc-800 to-zinc-700 text-base font-bold text-zinc-100">
                       {user?.fullName ? getInitials(user.fullName) : "?"}
                     </AvatarFallback>
@@ -117,7 +120,9 @@ export default function SettingsPage() {
                     <div className="rounded-xl border border-white/5 bg-zinc-950/60 p-3.5">
                       <span className="text-[10px] font-mono text-zinc-600 uppercase">Account Created</span>
                       <p className="text-xs font-medium text-zinc-300 mt-1">
-                        {user ? new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                        {user?.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                          : "—"}
                       </p>
                     </div>
                     <div className="rounded-xl border border-white/5 bg-zinc-950/60 p-3.5">

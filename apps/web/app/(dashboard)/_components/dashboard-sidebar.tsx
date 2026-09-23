@@ -20,7 +20,7 @@ import {
 import { trpc } from "~/trpc/client";
 import { useAuthStore } from "~/stores/auth";
 import { cn } from "~/lib/utils";
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Tooltip, TooltipTrigger, TooltipContent } from "~/components/ui/tooltip";
@@ -224,6 +224,9 @@ function DashboardSidebarContent() {
             <div className="flex items-center justify-between gap-2.5">
               <div className="flex min-w-0 flex-1 items-center gap-2.5 px-1 py-0.5 text-sm">
                 <Avatar className="size-8 shrink-0 ring-1 ring-zinc-800">
+                  {user.profileImageUrl && (
+                    <AvatarImage src={user.profileImageUrl} alt={user.fullName} />
+                  )}
                   <AvatarFallback className="bg-linear-to-tr from-zinc-800 to-zinc-700 text-xs font-semibold text-zinc-200">
                     {getInitials(user.fullName)}
                   </AvatarFallback>

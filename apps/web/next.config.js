@@ -8,6 +8,14 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../../"),
   allowedDevOrigins: ["localhost", "127.0.0.1"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+    ],
+  },
   experimental: {
     optimizePackageImports: [
       "lucide-react",
@@ -24,7 +32,7 @@ const nextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel-insights.com https://checkout.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.razorpay.com; connect-src 'self' https://*.posthog.com https://openrouter.ai https://*.vercel-insights.com https://api.razorpay.com https://lumberjack.razorpay.com; frame-ancestors 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel-insights.com https://checkout.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.razorpay.com https://lh3.googleusercontent.com; connect-src 'self' https://*.posthog.com https://openrouter.ai https://*.vercel-insights.com https://api.razorpay.com https://lumberjack.razorpay.com; frame-ancestors 'self';",
           },
           {
             key: "X-Content-Type-Options",
