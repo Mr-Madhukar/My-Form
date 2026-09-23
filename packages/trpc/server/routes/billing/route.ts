@@ -31,9 +31,17 @@ interface OrderParams {
   userId: string;
 }
 
+function cleanKey(val?: string | null): string {
+  if (!val) return "";
+  return val.trim().replace(/^["']|["']$/g, "").trim();
+}
+
 async function tryCreateRazorpaySubscription(params: SubscriptionParams) {
   try {
-    const credentials = Buffer.from(`${params.keyId}:${params.keySecret}`).toString("base64");
+    const cleanId = cleanKey(params.keyId);
+    const cleanSecret = cleanKey(params.keySecret);
+    const cleanPlanId = cleanKey(params.planId);
+    const credentials = Buffer.from(`${cleanId}:${cleanSecret}`).toString("base64");
     const authHeader = `Basic ${credentials}`;
     const res = await fetch("https://api.razorpay.com/v1/subscriptions", {
       method: "POST",
@@ -42,7 +50,7 @@ async function tryCreateRazorpaySubscription(params: SubscriptionParams) {
         Authorization: authHeader,
       },
       body: JSON.stringify({
-        plan_id: params.planId,
+        plan_id: cleanPlanId,
         total_count: params.cycle === "annual" ? 1 : 12,
         quantity: 1,
         customer_notify: 1,
@@ -57,30 +65,37 @@ async function tryCreateRazorpaySubscription(params: SubscriptionParams) {
     if (res.ok) {
       const data = (await res.json()) as { id: string };
       return {
-        type: "subscription" as const,
-        subscriptionId: data.id,
-        keyId: params.keyId,
-        plan: params.plan,
-        cycle: params.cycle,
+        success: true as const,
+        data: {
+          type: "subscription" as const,
+          subscriptionId: data.id,
+          keyId: cleanId,
+          plan: params.plan,
+          cycle: params.cycle,
+        },
       };
     }
     const errText = await res.text();
-    console.warn("[Razorpay] Subscriptions API non-200, falling back to Order:", errText);
+    console.warn("[Razorpay] Subscriptions API non-200:", res.status, errText);
+    return { success: false as const, error: `Subscription API (${res.status}): ${errText}` };
   } catch (err) {
-    console.error("[Razorpay] Subscription creation failed:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[Razorpay] Subscription creation failed:", message);
+    return { success: false as const, error: `Subscription error: ${message}` };
   }
-  return null;
 }
 
 async function tryCreateRazorpayOrder(params: OrderParams) {
   try {
+    const cleanId = cleanKey(params.keyId);
+    const cleanSecret = cleanKey(params.keySecret);
     const prices = {
       pro: params.cycle === "annual" ? 239 * 12 : 299,
       team: params.cycle === "annual" ? 799 * 12 : 999,
     };
     const amountInPaise = prices[params.plan] * 100;
 
-    const credentials = Buffer.from(`${params.keyId}:${params.keySecret}`).toString("base64");
+    const credentials = Buffer.from(`${cleanId}:${cleanSecret}`).toString("base64");
     const res = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
       headers: {
@@ -102,29 +117,34 @@ async function tryCreateRazorpayOrder(params: OrderParams) {
     if (res.ok) {
       const orderData = (await res.json()) as { id: string; amount: number };
       return {
-        type: "order" as const,
-        orderId: orderData.id,
-        amount: orderData.amount,
-        currency: "INR",
-        keyId: params.keyId,
-        plan: params.plan,
-        cycle: params.cycle,
+        success: true as const,
+        data: {
+          type: "order" as const,
+          orderId: orderData.id,
+          amount: orderData.amount,
+          currency: "INR",
+          keyId: cleanId,
+          plan: params.plan,
+          cycle: params.cycle,
+        },
       };
     }
     const errText = await res.text();
-    console.warn("[Razorpay] Orders API failed:", errText);
+    console.warn("[Razorpay] Orders API failed:", res.status, errText);
+    return { success: false as const, error: `Order API (${res.status}): ${errText}` };
   } catch (err) {
-    console.error("[Razorpay] Order creation failed:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[Razorpay] Order creation failed:", message);
+    return { success: false as const, error: `Order error: ${message}` };
   }
-  return null;
 }
 
 export const billingRouter = router({
   getConfig: protectedProcedure.query(() => {
     return {
-      razorpayKeyId: env.NEXT_PUBLIC_RAZORPAY_KEY_ID || env.RAZORPAY_KEY_ID || "",
-      hasProPlan: Boolean(env.RAZORPAY_PRO_PLAN_ID),
-      hasScalePlan: Boolean(env.RAZORPAY_SCALE_PLAN_ID),
+      razorpayKeyId: cleanKey(env.NEXT_PUBLIC_RAZORPAY_KEY_ID || env.RAZORPAY_KEY_ID),
+      hasProPlan: Boolean(cleanKey(env.RAZORPAY_PRO_PLAN_ID)),
+      hasScalePlan: Boolean(cleanKey(env.RAZORPAY_SCALE_PLAN_ID)),
     };
   }),
 
@@ -222,16 +242,18 @@ export const billingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const keyId = env.RAZORPAY_KEY_ID || env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-      const keySecret = env.RAZORPAY_KEY_SECRET;
-      const planId = input.plan === "pro" ? env.RAZORPAY_PRO_PLAN_ID : env.RAZORPAY_SCALE_PLAN_ID;
+      const keyId = cleanKey(env.RAZORPAY_KEY_ID || env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+      const keySecret = cleanKey(env.RAZORPAY_KEY_SECRET);
+      const planId = cleanKey(input.plan === "pro" ? env.RAZORPAY_PRO_PLAN_ID : env.RAZORPAY_SCALE_PLAN_ID);
 
       if (!keyId || !keySecret) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Razorpay credentials are not configured. Please contact support.",
+          message: `Razorpay credentials missing on backend server: ${!keyId ? "KEY_ID" : ""} ${!keySecret ? "KEY_SECRET" : ""}`.trim(),
         });
       }
+
+      const errors: string[] = [];
 
       if (planId) {
         const sub = await tryCreateRazorpaySubscription({
@@ -242,7 +264,8 @@ export const billingRouter = router({
           cycle: input.cycle,
           userId: ctx.userId,
         });
-        if (sub) return sub;
+        if (sub.success) return sub.data;
+        errors.push(sub.error);
       }
 
       const order = await tryCreateRazorpayOrder({
@@ -252,11 +275,13 @@ export const billingRouter = router({
         cycle: input.cycle,
         userId: ctx.userId,
       });
-      if (order) return order;
+      if (order.success) return order.data;
+      errors.push(order.error);
 
+      console.error("[Razorpay] All checkout methods failed:", errors);
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to create Razorpay checkout. Please try again later.",
+        message: `Razorpay checkout failed: ${errors.join(" | ")}`,
       });
     }),
 
@@ -272,7 +297,7 @@ export const billingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const secret = env.RAZORPAY_KEY_SECRET;
+      const secret = cleanKey(env.RAZORPAY_KEY_SECRET);
 
       if (secret && input.razorpaySignature) {
         if (input.razorpaySubscriptionId && input.razorpayPaymentId) {
