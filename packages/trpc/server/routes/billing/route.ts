@@ -226,14 +226,14 @@ export const billingRouter = router({
       const keySecret = env.RAZORPAY_KEY_SECRET;
       const planId = input.plan === "pro" ? env.RAZORPAY_PRO_PLAN_ID : env.RAZORPAY_SCALE_PLAN_ID;
 
-      if (!keyId) {
+      if (!keyId || !keySecret) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Razorpay Key ID is not configured in server environment.",
+          message: "Razorpay credentials are not configured. Please contact support.",
         });
       }
 
-      if (keySecret && planId) {
+      if (planId) {
         const sub = await tryCreateRazorpaySubscription({
           keyId,
           keySecret,
@@ -245,24 +245,19 @@ export const billingRouter = router({
         if (sub) return sub;
       }
 
-      if (keySecret) {
-        const order = await tryCreateRazorpayOrder({
-          keyId,
-          keySecret,
-          plan: input.plan,
-          cycle: input.cycle,
-          userId: ctx.userId,
-        });
-        if (order) return order;
-      }
-
-      return {
-        type: "simulation" as const,
-        subscriptionId: `sub_sim_${Date.now()}`,
+      const order = await tryCreateRazorpayOrder({
         keyId,
+        keySecret,
         plan: input.plan,
         cycle: input.cycle,
-      };
+        userId: ctx.userId,
+      });
+      if (order) return order;
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to create Razorpay checkout. Please try again later.",
+      });
     }),
 
   verifyPayment: protectedProcedure

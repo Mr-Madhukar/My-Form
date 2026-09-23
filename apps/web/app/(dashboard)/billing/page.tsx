@@ -360,18 +360,6 @@ export default function BillingPage() {
       const cycle = annual ? "annual" : "monthly";
       const sub = await createSubscriptionMutation.mutateAsync({ plan: planId, cycle });
 
-      // If test simulation mode
-      if (sub.type === "simulation") {
-        await verifyPaymentMutation.mutateAsync({
-          plan: planId,
-          cycle,
-        });
-        await subQuery.refetch();
-        await utils.auth.me.invalidate();
-        toast.success(`🎉 Upgraded to ${planId.toUpperCase()} Plan (Test Mode)!`);
-        return;
-      }
-
       const RazorpayConstructor = (
         window as unknown as {
           Razorpay?: new (opts: Record<string, unknown>) => { open: () => void };
