@@ -75,6 +75,51 @@ async function handleSubscriptionActivated(sub?: SubscriptionEntity) {
     razorpaySubscriptionId: sub?.id || null,
     currentPeriodEnd: periodEnd,
   });
+
+  if (plan === "pro" || plan === "team") {
+    await sendUpgradeEmailSafely({
+      userId,
+      plan,
+      cycle: cycle as "monthly" | "annual",
+      subscriptionId: sub?.id,
+    });
+  }
+}
+
+async function sendUpgradeEmailSafely(params: {
+  userId: string;
+  plan: "pro" | "team";
+  cycle: "monthly" | "annual";
+  subscriptionId?: string;
+  paymentId?: string;
+}) {
+  try {
+    const { db, eq, usersTable } = await getDb();
+    const [user] = await db
+      .select({ email: usersTable.email, fullName: usersTable.fullName })
+      .from(usersTable)
+      .where(eq(usersTable.id, params.userId))
+      .limit(1);
+
+    if (user?.email) {
+      const { emailService } = await import("@repo/services/email");
+      const prices = {
+        pro: params.cycle === "annual" ? 239 * 12 : 299,
+        team: params.cycle === "annual" ? 799 * 12 : 999,
+      };
+      await emailService.sendPlanUpgradeEmail({
+        to: user.email,
+        userName: user.fullName || undefined,
+        plan: params.plan,
+        cycle: params.cycle,
+        amount: prices[params.plan],
+        subscriptionId: params.subscriptionId,
+        paymentId: params.paymentId,
+      });
+    }
+  } catch (err) {
+    console.error("[Razorpay Webhook] Failed to send upgrade email:", err);
+  }
 }
 
 async function handlePaymentCaptured(payment?: PaymentEntity) {
@@ -100,6 +145,15 @@ async function handlePaymentCaptured(payment?: PaymentEntity) {
     razorpayPaymentId: payment?.id || null,
     currentPeriodEnd: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
   });
+
+  if (plan === "pro" || plan === "team") {
+    await sendUpgradeEmailSafely({
+      userId,
+      plan,
+      cycle: cycle as "monthly" | "annual",
+      paymentId: payment?.id,
+    });
+  }
 }
 
 async function handleSubscriptionCancelled(sub?: SubscriptionEntity) {

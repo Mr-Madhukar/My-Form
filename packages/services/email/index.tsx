@@ -8,6 +8,7 @@ import type { PaymentSummary, LeadScoreSummary } from "./templates/new-response"
 import SubmissionReceiptEmail from "./templates/submission-receipt";
 import type { PaymentReceiptInfo } from "./templates/submission-receipt";
 import HotLeadAlertEmail from "./templates/hot-lead-alert";
+import PlanUpgradeEmail from "./templates/plan-upgrade";
 import type { AnswerItem } from "./templates/email-shared";
 
 export type { AnswerItem, PaymentSummary, LeadScoreSummary, PaymentReceiptInfo };
@@ -161,6 +162,34 @@ class EmailService {
           respondentContact={params.respondentContact}
           answersSummary={params.answersSummary}
           responsesUrl={responsesUrl}
+        />
+      ),
+    });
+  }
+
+  async sendPlanUpgradeEmail(params: {
+    readonly to: string;
+    readonly userName?: string;
+    readonly plan: "pro" | "team";
+    readonly cycle: "monthly" | "annual";
+    readonly amount?: number;
+    readonly paymentId?: string;
+    readonly subscriptionId?: string;
+  }): Promise<void> {
+    const dashboardUrl = `${env.FRONTEND_URL}/billing`;
+    const planName = params.plan === "pro" ? "Pro Plan" : "Team Workspace";
+    await this.sendSafe({
+      to: params.to,
+      subject: `🎉 You're now on My-Form ${planName}!`,
+      react: (
+        <PlanUpgradeEmail
+          userName={params.userName}
+          plan={params.plan}
+          cycle={params.cycle}
+          amount={params.amount}
+          paymentId={params.paymentId}
+          subscriptionId={params.subscriptionId}
+          dashboardUrl={dashboardUrl}
         />
       ),
     });

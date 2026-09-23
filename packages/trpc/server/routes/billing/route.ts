@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { z } from "../../schema";
 import { router, protectedProcedure } from "../../trpc";
 import { env } from "@repo/services/env";
+import { emailService } from "@repo/services/email";
 import { TRPCError } from "@trpc/server";
 import db, { eq, and, desc, gte, inArray, count, isNull } from "@repo/database";
 import {
@@ -136,6 +137,79 @@ async function tryCreateRazorpayOrder(params: OrderParams) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[Razorpay] Order creation failed:", message);
     return { success: false as const, error: `Order error: ${message}` };
+  }
+}
+
+interface VerifySignatureInput {
+  razorpaySubscriptionId?: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  razorpaySignature?: string;
+}
+
+function validateRazorpaySignature(secret: string, input: VerifySignatureInput) {
+  if (!secret || !input.razorpaySignature || !input.razorpayPaymentId) return;
+
+  if (input.razorpaySubscriptionId) {
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(`${input.razorpayPaymentId}|${input.razorpaySubscriptionId}`)
+      .digest("hex");
+    if (expected !== input.razorpaySignature) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Invalid Razorpay subscription payment signature.",
+      });
+    }
+    return;
+  }
+
+  if (input.razorpayOrderId) {
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
+      .digest("hex");
+    if (expected !== input.razorpaySignature) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Invalid Razorpay order payment signature.",
+      });
+    }
+  }
+}
+
+async function notifyUserPlanUpgrade(params: {
+  userId: string;
+  plan: "pro" | "team";
+  cycle: "monthly" | "annual";
+  paymentId?: string;
+  subscriptionId?: string;
+}) {
+  try {
+    const [user] = await db
+      .select({ email: usersTable.email, fullName: usersTable.fullName })
+      .from(usersTable)
+      .where(eq(usersTable.id, params.userId))
+      .limit(1);
+
+    if (!user?.email) return;
+
+    const prices = {
+      pro: params.cycle === "annual" ? 239 * 12 : 299,
+      team: params.cycle === "annual" ? 799 * 12 : 999,
+    };
+
+    await emailService.sendPlanUpgradeEmail({
+      to: user.email,
+      userName: user.fullName || undefined,
+      plan: params.plan,
+      cycle: params.cycle,
+      amount: prices[params.plan],
+      paymentId: params.paymentId,
+      subscriptionId: params.subscriptionId,
+    });
+  } catch (err) {
+    console.error("[Billing] Failed to send upgrade email:", err);
   }
 }
 
@@ -300,32 +374,7 @@ export const billingRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const secret = cleanKey(env.RAZORPAY_KEY_SECRET);
-
-      if (secret && input.razorpaySignature) {
-        if (input.razorpaySubscriptionId && input.razorpayPaymentId) {
-          const expected = crypto
-            .createHmac("sha256", secret)
-            .update(`${input.razorpayPaymentId}|${input.razorpaySubscriptionId}`)
-            .digest("hex");
-          if (expected !== input.razorpaySignature) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid Razorpay subscription payment signature.",
-            });
-          }
-        } else if (input.razorpayOrderId && input.razorpayPaymentId) {
-          const expected = crypto
-            .createHmac("sha256", secret)
-            .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
-            .digest("hex");
-          if (expected !== input.razorpaySignature) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid Razorpay order payment signature.",
-            });
-          }
-        }
-      }
+      validateRazorpaySignature(secret, input);
 
       const days = input.cycle === "annual" ? 365 : 30;
       const periodStart = new Date();
@@ -346,6 +395,15 @@ export const billingRouter = router({
         razorpaySignature: input.razorpaySignature || null,
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,
+      });
+
+      // Send confirmation email asynchronously
+      void notifyUserPlanUpgrade({
+        userId: ctx.userId,
+        plan: input.plan,
+        cycle: input.cycle,
+        paymentId: input.razorpayPaymentId,
+        subscriptionId: input.razorpaySubscriptionId,
       });
 
       return {
