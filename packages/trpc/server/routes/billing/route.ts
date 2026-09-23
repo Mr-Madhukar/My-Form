@@ -279,9 +279,11 @@ export const billingRouter = router({
       errors.push(order.error);
 
       console.error("[Razorpay] All checkout methods failed:", errors);
+      const maskedKey = keyId.length > 8 ? `${keyId.slice(0, 8)}...${keyId.slice(-4)} (len ${keyId.length})` : keyId;
+      const maskedSecret = keySecret.length > 6 ? `${keySecret.slice(0, 3)}...${keySecret.slice(-3)} (len ${keySecret.length})` : `(len ${keySecret.length})`;
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: `Razorpay checkout failed: ${errors.join(" | ")}`,
+        message: `Razorpay [Key: ${maskedKey}, Secret: ${maskedSecret}]: ${errors.join(" | ")}`,
       });
     }),
 
