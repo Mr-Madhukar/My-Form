@@ -232,10 +232,10 @@ export default function HelpPage() {
             Our support team typically responds within a few hours.
           </p>
           <a
-            href="mailto:mrmadhukarjii@gmail.com"
+            href="mailto:support@my-form.mrmadhukar.in"
             className="group inline-flex items-center gap-1.5 rounded-xl border border-white/10 px-4 py-2 text-xs font-medium text-[#C4C4C4] transition-all duration-200 hover:border-[#E8854A]/30 hover:text-[#E8854A]"
           >
-            mrmadhukarjii@gmail.com
+            support@my-form.mrmadhukar.in
             <ExternalLink className="size-3 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </a>
         </motion.div>

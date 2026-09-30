@@ -17,9 +17,9 @@ import {
 } from "./schema";
 import { eq, and } from "drizzle-orm";
 
-const DEMO_EMAIL = "[EMAIL_ADDRESS]";
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? ["Madhukar", "1"].join("@");
-const DEMO_NAME = "Madhukar";
+const DEMO_EMAIL = process.env.DEMO_EMAIL ?? "demo@myform.dev";
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? ["DemoUser", "2025!"].join("@");
+const DEMO_NAME = "Demo User";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -1047,8 +1047,22 @@ async function upsertDemoUserAndWorkspace() {
     const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
     await db.insert(userCredentialsTable).values({ userId: user!.id, passwordHash });
   } else {
-    console.log("  Demo user exists — skipping creation");
+    console.log("  Demo user exists — updating credentials…");
     await db.update(usersTable).set({ emailVerified: true }).where(eq(usersTable.id, user.id));
+    const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+    const [existingCred] = await db
+      .select()
+      .from(userCredentialsTable)
+      .where(eq(userCredentialsTable.userId, user.id))
+      .limit(1);
+    if (existingCred) {
+      await db
+        .update(userCredentialsTable)
+        .set({ passwordHash })
+        .where(eq(userCredentialsTable.userId, user.id));
+    } else {
+      await db.insert(userCredentialsTable).values({ userId: user.id, passwordHash });
+    }
   }
 
   let [workspace] = await db
@@ -1074,31 +1088,30 @@ async function upsertDemoUserAndWorkspace() {
 }
 
 async function upsertSuperAdmins() {
-  const SUPER_ADMINS = [
-    { email: "madhukar212005@gmail.com", name: "Madhukar (Admin)" },
-    { email: "mrmadhukarjii@gmail.com", name: "Madhukar Jii (Admin)" },
-  ];
+  const envAdminEmails = process.env.ADMIN_EMAILS
+    ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+    : ["admin@myform.dev"];
 
-  for (const adminInfo of SUPER_ADMINS) {
+  for (const email of envAdminEmails) {
     let [adminUser] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, adminInfo.email))
+      .where(eq(usersTable.email, email))
       .limit(1);
 
     if (!adminUser) {
-      console.log(`  Creating admin user: ${adminInfo.email}…`);
+      console.log(`  Creating admin user: ${email}…`);
       [adminUser] = await db
         .insert(usersTable)
         .values({
-          fullName: adminInfo.name,
-          email: adminInfo.email,
+          fullName: "System Admin",
+          email: email,
           emailVerified: true,
           role: "admin",
         })
         .returning();
     } else {
-      console.log(`  Admin user exists (${adminInfo.email}) — ensuring role is admin…`);
+      console.log(`  Admin user exists (${email}) — ensuring role is admin…`);
       await db
         .update(usersTable)
         .set({ emailVerified: true, role: "admin" })
@@ -1115,7 +1128,7 @@ async function upsertSuperAdmins() {
       if (!adminWorkspace) {
         [adminWorkspace] = await db
           .insert(workspacesTable)
-          .values({ name: `${adminInfo.name}'s Workspace`, createdBy: adminUser.id })
+          .values({ name: `${adminUser.fullName || "Admin"}'s Workspace`, createdBy: adminUser.id })
           .returning();
         await db
           .insert(workspaceMembersTable)

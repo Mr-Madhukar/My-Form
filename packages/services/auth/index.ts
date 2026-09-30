@@ -16,8 +16,7 @@ import { emailService } from "../email";
 import { type AuthTokens, type MeOutput } from "./model";
 
 const DEFAULT_ADMIN_EMAILS = new Set([
-  "madhukar212005@gmail.com",
-  "mrmadhukarjii@gmail.com",
+  "admin@myform.dev",
 ]);
 
 export function isSuperAdminEmail(email: string): boolean {

@@ -12,8 +12,8 @@ A production-grade, AI-native conversational form builder (Typeform alternative)
 - **Public Form Gallery:** [https://my-form.mrmadhukar.in/explore](https://my-form.mrmadhukar.in/explore)
 
 <!-- ### Test Credentials
-* **Demo Email:** `mrmadhukar@gmail.com`
-* **Demo Password:** `Madhukar@2002` -->
+* **Demo Email:** `demo@myform.dev`
+* **Demo Password:** `DemoUser@2025!` -->
 
 ---
 
