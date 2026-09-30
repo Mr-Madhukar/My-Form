@@ -91,7 +91,7 @@ CREATE UNIQUE INDEX "workspace_members_workspace_user_idx" ON "workspace_members
 CREATE INDEX "forms_workspace_id_idx" ON "forms" USING btree ("workspace_id");--> statement-breakpoint
 CREATE INDEX "forms_deleted_at_idx" ON "forms" USING btree ("deleted_at") WHERE "forms"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "form_versions_form_id_idx" ON "form_versions" USING btree ("form_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "form_versions_one_draft_per_form" ON "form_versions" USING btree ("form_id") WHERE "form_versions"."status" = 'dra' 'ft';--> statement-breakpoint
+CREATE UNIQUE INDEX "form_versions_one_draft_per_form" ON "form_versions" USING btree ("form_id") WHERE "form_versions"."status" = 'draft';--> statement-breakpoint
 CREATE UNIQUE INDEX "form_versions_one_published_per_form" ON "form_versions" USING btree ("form_id") WHERE "form_versions"."status" = 'published';--> statement-breakpoint
 CREATE INDEX "form_fields_version_id_idx" ON "form_fields" USING btree ("form_version_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "form_fields_version_order_idx" ON "form_fields" USING btree ("form_version_id","order");--> statement-breakpoint
