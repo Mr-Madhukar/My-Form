@@ -17,7 +17,7 @@ export const workspacesRouter = router({
     .meta({ openapi: { method: "GET", path: "/workspaces", tags: TAGS } })
     .input(zodUndefinedModel)
     .output(z.array(workspaceOutputSchema))
-    .query(async ({ ctx }) => {
+    .query(({ ctx }) => {
       return withCache(CacheKeys.userWorkspaces(ctx.userId), 600, async () => {
         const rows = await db
           .select({

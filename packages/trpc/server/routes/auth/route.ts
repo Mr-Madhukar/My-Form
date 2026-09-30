@@ -110,7 +110,7 @@ export const authRouter = router({
     .meta({ openapi: { method: "GET", path: getPath("/supported-providers"), tags: TAGS } })
     .input(zodUndefinedModel)
     .output(z.readonly(z.array(getAuthenticationMethodOutputSchema)))
-    .query(async () => {
+    .query(() => {
       return userService.getAuthenticationMethods();
     }),
 

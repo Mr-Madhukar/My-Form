@@ -481,7 +481,7 @@ function FormCard({
         <ContextMenuItem
           onClick={() => {
             const url = `${window.location.origin}/f/${form.publicSlug}`;
-            navigator.clipboard.writeText(url);
+            void navigator.clipboard.writeText(url);
             toast.success("Link copied to clipboard!");
           }}
           className="hover:bg-white/5 cursor-pointer text-xs rounded-lg py-2 flex items-center justify-between"

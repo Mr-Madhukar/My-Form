@@ -1092,154 +1092,160 @@ async function upsertSuperAdmins() {
     ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
     : ["admin@myform.dev"];
 
-  for (const email of envAdminEmails) {
-    let [adminUser] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, email))
-      .limit(1);
-
-    if (!adminUser) {
-      console.log(`  Creating admin user: ${email}…`);
-      [adminUser] = await db
-        .insert(usersTable)
-        .values({
-          fullName: "System Admin",
-          email: email,
-          emailVerified: true,
-          role: "admin",
-        })
-        .returning();
-    } else {
-      console.log(`  Admin user exists (${email}) — ensuring role is admin…`);
-      await db
-        .update(usersTable)
-        .set({ emailVerified: true, role: "admin" })
-        .where(eq(usersTable.id, adminUser.id));
-    }
-
-    if (adminUser) {
-      let [adminWorkspace] = await db
+  await Promise.all(
+    envAdminEmails.map(async (email) => {
+      let [adminUser] = await db
         .select()
-        .from(workspacesTable)
-        .where(eq(workspacesTable.createdBy, adminUser.id))
+        .from(usersTable)
+        .where(eq(usersTable.email, email))
         .limit(1);
 
-      if (!adminWorkspace) {
-        [adminWorkspace] = await db
-          .insert(workspacesTable)
-          .values({ name: `${adminUser.fullName || "Admin"}'s Workspace`, createdBy: adminUser.id })
+      if (!adminUser) {
+        console.log(`  Creating admin user: ${email}…`);
+        [adminUser] = await db
+          .insert(usersTable)
+          .values({
+            fullName: "System Admin",
+            email: email,
+            emailVerified: true,
+            role: "admin",
+          })
           .returning();
+      } else {
+        console.log(`  Admin user exists (${email}) — ensuring role is admin…`);
         await db
-          .insert(workspaceMembersTable)
-          .values({ workspaceId: adminWorkspace!.id, userId: adminUser.id, role: "owner" });
+          .update(usersTable)
+          .set({ emailVerified: true, role: "admin" })
+          .where(eq(usersTable.id, adminUser.id));
       }
-    }
-  }
+
+      if (adminUser) {
+        let [adminWorkspace] = await db
+          .select()
+          .from(workspacesTable)
+          .where(eq(workspacesTable.createdBy, adminUser.id))
+          .limit(1);
+
+        if (!adminWorkspace) {
+          [adminWorkspace] = await db
+            .insert(workspacesTable)
+            .values({ name: `${adminUser.fullName || "Admin"}'s Workspace`, createdBy: adminUser.id })
+            .returning();
+          await db
+            .insert(workspaceMembersTable)
+            .values({ workspaceId: adminWorkspace!.id, userId: adminUser.id, role: "owner" });
+        }
+      }
+    }),
+  );
 }
 
 async function seedWorkspaceForms(workspaceId: string) {
-  for (const formDef of FORMS) {
-    const existing = await db
-      .select({ id: formsTable.id })
-      .from(formsTable)
-      .innerJoin(
-        formVersionsTable,
-        and(
-          eq(formVersionsTable.formId, formsTable.id),
-          eq(formVersionsTable.title, formDef.title),
-        ),
-      )
-      .where(eq(formsTable.workspaceId, workspaceId))
-      .limit(1);
+  await Promise.all(
+    FORMS.map(async (formDef) => {
+      const existing = await db
+        .select({ id: formsTable.id })
+        .from(formsTable)
+        .innerJoin(
+          formVersionsTable,
+          and(
+            eq(formVersionsTable.formId, formsTable.id),
+            eq(formVersionsTable.title, formDef.title),
+          ),
+        )
+        .where(eq(formsTable.workspaceId, workspaceId))
+        .limit(1);
 
-    if (existing.length > 0) {
-      console.log(`  Skipping existing form: "${formDef.title}"`);
-      continue;
-    }
+      if (existing.length > 0) {
+        console.log(`  Skipping existing form: "${formDef.title}"`);
+        return;
+      }
 
-    console.log(`  Seeding form: "${formDef.title}"`);
+      console.log(`  Seeding form: "${formDef.title}"`);
 
-    const [form] = await db
-      .insert(formsTable)
-      .values({
-        workspaceId,
-        publicSlug: nanoid(10),
-        visibility: formDef.visibility,
-      })
-      .returning();
-
-    const [version] = await db
-      .insert(formVersionsTable)
-      .values({
-        formId: form!.id,
-        versionNumber: 1,
-        status: "published",
-        title: formDef.title,
-        description: formDef.description,
-        publishedAt: new Date(),
-      })
-      .returning();
-
-    await db.insert(formVersionsTable).values({
-      formId: form!.id,
-      versionNumber: 2,
-      status: "draft",
-      title: formDef.title,
-      description: formDef.description,
-    });
-
-    await db.insert(formFieldsTable).values(
-      formDef.fields.map((f, i) => ({
-        id: f.id,
-        formVersionId: version!.id,
-        order: i,
-        type: f.type,
-        label: f.label,
-        required: f.required,
-        config: f.config,
-      })),
-    );
-
-    for (const resp of formDef.responses) {
-      const [response] = await db
-        .insert(responsesTable)
+      const [form] = await db
+        .insert(formsTable)
         .values({
-          formVersionId: version!.id,
-          responseToken: nanoid(),
-          startedAt: randomDate(30),
-          completedAt: randomDate(30),
-          lastActivityAt: new Date(),
+          workspaceId,
+          publicSlug: nanoid(10),
+          visibility: formDef.visibility,
         })
         .returning();
 
-      const answerEntries = Object.entries(resp.answers).filter(
-        ([, v]) => v !== "" && v !== null && v !== undefined,
+      const [version] = await db
+        .insert(formVersionsTable)
+        .values({
+          formId: form!.id,
+          versionNumber: 1,
+          status: "published",
+          title: formDef.title,
+          description: formDef.description,
+          publishedAt: new Date(),
+        })
+        .returning();
+
+      await db.insert(formVersionsTable).values({
+        formId: form!.id,
+        versionNumber: 2,
+        status: "draft",
+        title: formDef.title,
+        description: formDef.description,
+      });
+
+      await db.insert(formFieldsTable).values(
+        formDef.fields.map((f, i) => ({
+          id: f.id,
+          formVersionId: version!.id,
+          order: i,
+          type: f.type,
+          label: f.label,
+          required: f.required,
+          config: f.config,
+        })),
       );
-      if (answerEntries.length > 0) {
-        await db.insert(responseAnswersTable).values(
-          answerEntries.map(([fieldId, value]) => ({
-            responseId: response!.id,
-            fieldId,
-            value: value as Record<string, unknown>,
-          })),
-        );
-      }
 
-      if (resp.followups && resp.followups.length > 0) {
-        await db.insert(aiFollowupsTable).values(
-          resp.followups.map((fu) => ({
-            responseId: response!.id,
-            fieldId: fu.fieldId,
-            aiQuestion: fu.aiQuestion,
-            userAnswer: fu.userAnswer,
-          })),
-        );
-      }
-    }
+      await Promise.all(
+        formDef.responses.map(async (resp) => {
+          const [response] = await db
+            .insert(responsesTable)
+            .values({
+              formVersionId: version!.id,
+              responseToken: nanoid(),
+              startedAt: randomDate(30),
+              completedAt: randomDate(30),
+              lastActivityAt: new Date(),
+            })
+            .returning();
 
-    console.log(`    ✓ ${formDef.responses.length} responses seeded`);
-  }
+          const answerEntries = Object.entries(resp.answers).filter(
+            ([, v]) => v !== "" && v !== null && v !== undefined,
+          );
+          if (answerEntries.length > 0) {
+            await db.insert(responseAnswersTable).values(
+              answerEntries.map(([fieldId, value]) => ({
+                responseId: response!.id,
+                fieldId,
+                value: value as Record<string, unknown>,
+              })),
+            );
+          }
+
+          if (resp.followups && resp.followups.length > 0) {
+            await db.insert(aiFollowupsTable).values(
+              resp.followups.map((fu) => ({
+                responseId: response!.id,
+                fieldId: fu.fieldId,
+                aiQuestion: fu.aiQuestion,
+                userAnswer: fu.userAnswer,
+              })),
+            );
+          }
+        }),
+      );
+
+      console.log(`    ✓ ${formDef.responses.length} responses seeded`);
+    }),
+  );
 }
 
 async function seed() {

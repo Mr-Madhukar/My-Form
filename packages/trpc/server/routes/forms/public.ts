@@ -349,7 +349,7 @@ export const formsPublicRouter = router({
     .meta({ openapi: { method: "GET", path: "/public/forms", tags: TAGS } })
     .input(zodUndefinedModel)
     .output(z.array(exploreFormSchema))
-    .query(async () => {
+    .query(() => {
       return withCache(CacheKeys.formsPublicList(), 300, async () => {
         const rows = await db
           .select({
@@ -388,7 +388,7 @@ export const formsPublicRouter = router({
     .meta({ openapi: { method: "GET", path: "/public/forms/{slug}", tags: TAGS } })
     .input(z.object({ slug: z.string() }))
     .output(publicFormSchema)
-    .query(async ({ input }) => {
+    .query(({ input }) => {
       return withCache(CacheKeys.formSlug(input.slug), 1800, async () => {
         const [form] = await db
           .select()

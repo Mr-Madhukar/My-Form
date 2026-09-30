@@ -84,7 +84,7 @@ export const analyticsRouter = router({
         ),
       }),
     )
-    .query(async ({ ctx }) => {
+    .query(({ ctx }) => {
       return withCache(`analytics:form:${ctx.form.id}`, 120, async () => {
         const versions = await db
           .select({ id: formVersionsTable.id })
@@ -188,7 +188,7 @@ export const analyticsRouter = router({
         }),
       ),
     )
-    .query(async ({ ctx }) => {
+    .query(({ ctx }) => {
       return withCache(`analytics:fields:${ctx.form.id}`, 120, async () => {
         const versions = await db
           .select({ id: formVersionsTable.id })

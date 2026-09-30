@@ -3,9 +3,7 @@ import { googleOAuth2Client } from "../clients/google-oauth";
 import { GetAuthenticationMethodOutputSchema } from "./model";
 
 class UserService {
-  public async getAuthenticationMethods(): Promise<
-    ReadonlyArray<GetAuthenticationMethodOutputSchema>
-  > {
+  public getAuthenticationMethods(): ReadonlyArray<GetAuthenticationMethodOutputSchema> {
     const supportedAuthenticationProviders: GetAuthenticationMethodOutputSchema[] = [];
 
     const isGoogleConfigured = !!(env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET);

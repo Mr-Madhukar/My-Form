@@ -13,7 +13,7 @@ export interface Context {
   };
 }
 
-export async function createContext({ req, res }: CreateExpressContextOptions): Promise<Context> {
+export function createContext({ req, res }: CreateExpressContextOptions): Context {
   let userId: string | null = null;
   const token = (req.cookies as Partial<Record<string, string>>)?.access_token;
   if (token) {

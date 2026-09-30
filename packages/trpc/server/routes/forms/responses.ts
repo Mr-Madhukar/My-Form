@@ -89,7 +89,7 @@ export const formsResponsesRouter = router({
     .meta({ openapi: { method: "GET", path: "/forms/{formId}/responses/summary", tags: TAGS } })
     .input(z.object({ formId: z.string() }))
     .output(summaryDataSchema)
-    .query(async ({ ctx }) => {
+    .query(({ ctx }) => {
       return withCache(CacheKeys.formSummary(ctx.form.id), 180, async () => {
         const versions = await db
           .select({ id: formVersionsTable.id, title: formVersionsTable.title })

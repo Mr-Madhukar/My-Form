@@ -22,7 +22,7 @@ export const dashboardRouter = router({
         publishedForms: z.number(),
       }),
     )
-    .query(async ({ ctx }) => {
+    .query(({ ctx }) => {
       return withCache(`dashboard:stats:${ctx.workspace.id}`, 120, async () => {
         // Total forms (not deleted)
         const [totalFormsRow] = await db

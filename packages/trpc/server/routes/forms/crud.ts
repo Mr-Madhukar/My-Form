@@ -35,7 +35,7 @@ export const list = workspaceProcedure
   .meta({ openapi: { method: "GET", path: "/workspaces/{workspaceId}/forms", tags: TAGS } })
   .input(z.object({ workspaceId: z.string() }))
   .output(z.array(formListItemSchema))
-  .query(async ({ ctx }) => {
+  .query(({ ctx }) => {
     return withCache(CacheKeys.workspaceForms(ctx.workspace.id), 180, async () => {
       const rows = await db
         .select({
@@ -244,18 +244,20 @@ export const toggleLeadScoring = formProcedure
       .from(formVersionsTable)
       .where(eq(formVersionsTable.formId, ctx.form.id));
 
-    for (const v of versions) {
-      const current = (v.settings ?? {}) as Record<string, unknown>;
-      await db
-        .update(formVersionsTable)
-        .set({
-          settings: {
-            ...current,
-            aiLeadScoringEnabled: input.enabled,
-          },
-        })
-        .where(eq(formVersionsTable.id, v.id));
-    }
+    await Promise.all(
+      versions.map((v) => {
+        const current = (v.settings ?? {}) as Record<string, unknown>;
+        return db
+          .update(formVersionsTable)
+          .set({
+            settings: {
+              ...current,
+              aiLeadScoringEnabled: input.enabled,
+            },
+          })
+          .where(eq(formVersionsTable.id, v.id));
+      }),
+    );
 
     await invalidateKeys(CacheKeys.formSlug(ctx.form.publicSlug));
     return { success: true, enabled: input.enabled };
@@ -304,18 +306,20 @@ export const updatePaymentConfig = formProcedure
       .from(formVersionsTable)
       .where(eq(formVersionsTable.formId, ctx.form.id));
 
-    for (const v of versions) {
-      const current = (v.settings ?? {}) as Record<string, unknown>;
-      await db
-        .update(formVersionsTable)
-        .set({
-          settings: {
-            ...current,
-            payment: input.config,
-          },
-        })
-        .where(eq(formVersionsTable.id, v.id));
-    }
+    await Promise.all(
+      versions.map((v) => {
+        const current = (v.settings ?? {}) as Record<string, unknown>;
+        return db
+          .update(formVersionsTable)
+          .set({
+            settings: {
+              ...current,
+              payment: input.config,
+            },
+          })
+          .where(eq(formVersionsTable.id, v.id));
+      }),
+    );
 
     await invalidateKeys(CacheKeys.formSlug(ctx.form.publicSlug));
     return { success: true, config: input.config };
